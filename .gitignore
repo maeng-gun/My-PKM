@@ -7,3 +7,4 @@ __pycache__/
 auth_state.json
 browser_session/
 *.png
+secrets/
