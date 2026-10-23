@@ -84,3 +84,9 @@
   3. **신규 도입 상품 추천**: 기존 보유 ETF로 커버하기 어려운 매크로 기회가 있을 경우, 해당 자산군에 새로 편입할 만한 유망 ETF/상품을 함께 제안합니다.
 - **취약 종목 리스크 모니터링 원칙 (Part E)**:
   - 매크로 리스크 요인별로 가장 타격이 클 수 있는 실제 보유 ETF를 지목하고, 비중 축소나 방어를 검토할 구체적인 시장 지표(금리 레벨, 환율, 원자재 가격 등) 트리거를 명확히 제시합니다.
+
+## Supabase 데이터베이스 적재 및 보안 원칙 (Data Ingestion)
+- **Service Role Key 필수 사용**: Supabase의 모든 public 테이블에는 RLS(Row Level Security)가 활성화되어 있습니다. `load_to_supabase.py` 스크립트 실행 시 `.env`에 `SUPABASE_SERVICE_ROLE_KEY`가 반드시 등록되어 있어야 쓰기/삭제(Post/Delete) 권한이 인가됩니다. (`ANON_KEY` 사용 시 RLS에 의해 권한 에러 42501 발생)
+- **신규 테이블 생성 시 원자적 단위(Atomic Unit) 준수**:
+  신규 테이블을 추가할 때는 반드시 ① `CREATE TABLE` -> ② `GRANT ... TO service_role, authenticated` -> ③ `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` -> ④ `CREATE POLICY`의 4단계를 단일 마이그레이션으로 실행해야 합니다.
+

@@ -36,11 +36,13 @@ def upsert_rows(client, url, table_name, on_conflict_cols, rows, headers, chunk_
 
 def load_metrics_to_supabase(metrics_path, fallback_dump_dir="scratch", clean_date=False):
     load_dotenv()
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
+    service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    if not service_key:
+        logger.warning("[보안 알림] SUPABASE_SERVICE_ROLE_KEY가 설정되지 않아 ANON_KEY로 진행합니다. Supabase RLS 정책에 의해 쓰기/삭제 작업이 거부될 수 있습니다.")
+    key = service_key or os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY")
 
     if not url or not key:
-        logger.error("Missing Supabase credentials in .env.")
+        logger.error("Missing Supabase credentials in .env. (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required)")
         return False
 
     metrics_data = load_json(metrics_path)
