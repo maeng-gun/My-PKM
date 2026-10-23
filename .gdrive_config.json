@@ -1,0 +1,6 @@
+{
+  "workspace_root": "Antigravity_Workspaces",
+  "project_name": "macro_analyzer",
+  "folders": ["input_staging", "scratch", "archive", "secrets"],
+  "secret_files": [".env", "auth_state.json"]
+}

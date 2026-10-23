@@ -43,7 +43,7 @@ def get_authenticated_context(p):
             test_page = context.new_page()
             test_page.goto("https://www.valley.town/premium/lounge", wait_until="domcontentloaded", timeout=15000)
             test_page.wait_for_timeout(1500)
-            if "/login" not in test_page.url:
+            if "/login" not in test_page.url and "/premium/lounge" in test_page.url:
                 test_page.close()
                 return browser, context
             print("[Auth] Existing session expired (redirected to login), recreating...")

@@ -141,14 +141,14 @@ description: "Macro-Portfolio Cross-Quantification Engine: 일일 매크로 리�
        "topic_page_id": "3e1bad03-f76c-8089-b890-f93c69807e21"
      }
      ```
-   * **기존 동일 날짜 리포트 정리 (중복 방지)**:
-     재분석 등으로 같은 날짜의 리포트가 재생성된 경우 기존 Notion 페이지를 찾아 아카이브(휴지통 이동)합니다:
+   * **기존 동일 날짜 리포트 정리 (중복 방지 및 주제 선별 삭제)**:
+     재분석 등으로 같은 날짜의 리포트가 재생성된 경우 기존 Notion 페이지 중 **'주제' 속성이 '매크로 분석 스코어링'(`topic_page_id: 3e1bad03-f76c-8089-b890-f93c69807e21`)으로 지정된 페이지만 선별**하여 아카이브(휴지통 이동)합니다. 글로벌 `notion-manager` 스킬을 활용하며, 날짜와 주제 ID를 함께 지정하여 다른 사용자 페이지의 오삭제를 원천 차단합니다:
      ```bash
-     .\.venv\Scripts\python.exe .agents/skills/macro_portfolio_analysis/scripts/delete_notion_page.py --date <YYYY-MM-DD>
+     .\.venv\Scripts\python.exe C:/Users/maeng-gun/.gemini/config/skills/notion-manager/scripts/notion_manager.py delete --date <YYYY-MM-DD> --topic-id 3e1bad03-f76c-8089-b890-f93c69807e21 --topic-name "매크로 분석 스코어링"
      ```
    * **신규 리포트 본문 업로드**:
      ```bash
-     .\.venv\Scripts\python.exe C:/Users/maeng-gun/.gemini/config/skills/notion-uploader/scripts/upload_to_notion.py
+     .\.venv\Scripts\python.exe C:/Users/maeng-gun/.gemini/config/skills/notion-manager/scripts/notion_manager.py upload
      ```
    * 생성된 Notion 페이지 URL을 확인합니다.
 

@@ -8,3 +8,4 @@ auth_state.json
 browser_session/
 *.png
 /AGY_Artifacts/
+secrets/
