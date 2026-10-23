@@ -61,9 +61,22 @@ def get_authenticated_context(p):
     page.fill('input[name="password"]', PASSWORD)
     page.click('button[type="submit"]')
     page.wait_for_timeout(6000)
+
+    # 로그인 성공 여부 검증
+    if "/login" in page.url:
+        page.close()
+        context.close()
+        browser.close()
+        raise RuntimeError(
+            "[Auth] 로그인 실패: 이메일 또는 비밀번호가 일치하지 않습니다. "
+            ".env 파일의 VALLEY_EMAIL, VALLEY_PASSWORD를 확인하거나 "
+            "`python .agents/skills/valley_ai_scrap/scripts/login_interactive.py`를 실행하여 직접 로그인해주세요."
+        )
+
     context.storage_state(path=AUTH_FILE)
     page.close()
     return browser, context
+
 
 def parse_date_from_text(text):
     """
