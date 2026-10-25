@@ -1,9 +1,9 @@
 [project]
-name = "macro-analyzer"
+name = "my-pkm"
 version = "0.1.0"
 description = "Macro-Portfolio Cross-Analyzer"
 authors = [{name = "maeng-gun", email = "sarangia85@gmail.com"}]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "pdfplumber>=0.11.4",
     "supabase>=2.10.0",
@@ -11,5 +11,6 @@ dependencies = [
     "playwright>=1.48.0",
     "httpx>=0.27.0",
     "notion-client>=3.1.0",
-    "markdown-it-py>=3.0.0"
+    "markdown-it-py>=3.0.0",
+    "kordoc>=0.2.0"
 ]

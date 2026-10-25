@@ -8,7 +8,7 @@ description: "Macro-Portfolio Cross-Quantification Engine: 일일 매크로 리�
 당신은 글로벌 매크로 경제 분석가이자 TAA(Tactical Asset Allocation) 퀀트 포트폴리오 관리자입니다.
 당신의 임무는 `input_staging/`에 수집된 거시경제 리포트와 Supabase의 실제 포트폴리오 스냅샷을 대조하여, **1) LLM 직교 파라미터 추출**, **2) 결정론적 퀀트 연산 엔진 구동**, **3) 정성적 TAA 리밸런싱 액션 플랜 합성**, **4) Supabase 시계열 테이블 UPSERT 적재**, 그리고 **5) Notion 자동 업로드**를 일자별로 완결하는 것입니다.
 
-세부 스코어링 공식 및 페르소나 원칙은 [AGENTS.md](file:///c:/Users/maeng-gun/Desktop/python/macro_analyzer/macro_analyzer/AGENTS.md)를 준수하세요.
+세부 스코어링 공식 및 페르소나 원칙은 [AGENTS.md](../../../AGENTS.md)를 준수하세요.
 
 ---
 
@@ -51,7 +51,7 @@ description: "Macro-Portfolio Cross-Quantification Engine: 일일 매크로 리�
    * 당일 핵심 매크로 토픽은 통상 **2~5개** 수준으로 엄선합니다.
 2. **토픽 네이밍 컨벤션**:
    * `[경제학적 이론/명제 중심] 간결형`으로 명명합니다. (예: `기간프리미엄(Term Premium) 재평가와 글로벌 장기금리 상승`, `파생상품 만기 및 기관 리밸런싱에 따른 유동성 수급 충격`)
-3. 각 토픽에 대해 [asset_universe.json](file:///c:/Users/maeng-gun/Desktop/python/macro_analyzer/macro_analyzer/.agents/skills/macro_portfolio_analysis/references/asset_universe.json)의 **8대 매크로 자산군**(`귀금속`, `원자재`, `인컴자산`, `국내주식`, `해외주식`, `국내채권`, `해외채권`, `만기보유채권 및 현금성`) 중 **직접적 관련이 있는 자산군**만 선별하여 매핑합니다.
+3. 각 토픽에 대해 [asset_universe.json](references/asset_universe.json)의 **8대 매크로 자산군**(`귀금속`, `원자재`, `인컴자산`, `국내주식`, `해외주식`, `국내채권`, `해외채권`, `만기보유채권 및 현금성`) 중 **직접적 관련이 있는 자산군**만 선별하여 매핑합니다.
 4. 관련 자산군에 대해 실질적 파급력이 있는 **Horizon(1: 단기 0~3개월, 2: 중기 3개월~1년, 3: 장기 1년 이상)**을 선택하고 4차원 파라미터를 도출합니다:
    * **Direction**: `[-1, 0, 1]` (-1: 하락, 0: 중립/불확실, 1: 상승)
    * **Impact**: `[0.0 ~ 1.0]` (0.1 단위, 선반영된 기지의 뉴스는 감쇄)
@@ -91,7 +91,7 @@ description: "Macro-Portfolio Cross-Quantification Engine: 일일 매크로 리�
 
 ### Step 4: 정성적 액션 플랜 합성 및 리포트 작성 (LLM 합성)
 `calculated_metrics`의 확정 수치와 `portfolio_snapshot`의 `holdings` 목록을 결합하여 완성도 높은 마크다운 리포트를 작성합니다.
-*(세부 작성 표준 및 모범 예시는 [gold_standard_report_example.md](file:///c:/Users/maeng-gun/Desktop/python/macro_analyzer/macro_analyzer/.agents/skills/macro_portfolio_analysis/examples/gold_standard_report_example.md)를 준수하세요.)*
+*(세부 작성 표준 및 모범 예시는 [gold_standard_report_example.md](examples/gold_standard_report_example.md)를 준수하세요.)*
 
 * **본문 헤더 규칙**: 노션 페이지 제목과 중복되는 최상단 `# Daily Macro-Portfolio Analysis...` 같은 헤더는 생략하고, 바로 `## Part A: 당일 핵심 거시경제 이슈 요약`부터 시작합니다.
 * **Part A (당일 핵심 거시경제 이슈 요약)**:

@@ -1,6 +1,6 @@
-# Macro Analyzer (글로벌 매크로 경제 분석가 및 TAA 포트폴리오 관리 시스템)
+# My-PKM (Personal Knowledge Management Agent Hub & Global Macro Portfolio Analyzer)
 
-이 프로젝트는 파편화된 거시경제 리포트와 뉴스를 수집/분석하여 8대 매크로 자산군에 대한 정량 파라미터를 산출하고, TAA(Tactical Asset Allocation) 리밸런싱 액션 플랜을 도출하는 시스템입니다.
+이 프로젝트는 구글 드라이브 기반의 옵시디언 볼트(`My-Wiki`), 외부 원천자료 수집 파이프라인(`Inbox_Raw` ➔ `Archive_Sources`), 한국형 문서 파서 `kordoc`을 결합한 개인지식관리(PKM) 에이전트 허브이자, 일일 거시경제 리포트와 뉴스를 수집/분석하여 8대 매크로 자산군에 대한 정량 파라미터를 산출하고 TAA(Tactical Asset Allocation) 리밸런싱 액션 플랜을 도출하는 퀀트 포트폴리오 관리 시스템입니다.
 
 ---
 
@@ -34,7 +34,7 @@ python ~/.gemini/config/skills/gdrive-storage/scripts/gdrive_manager.py init
 ```
 
 ### 3. 자동 처리 내용
-1. 구글 드라이브 내 워크스페이스(`내 드라이브\Antigravity_Workspaces\macro_analyzer\`)를 자동 감지합니다.
+1. 구글 드라이브 내 워크스페이스(`내 드라이브\Antigravity_Workspaces\My-PKM\`)를 자동 감지합니다.
 2. `input_staging`, `scratch`, `archive`, `secrets` 폴더가 구글 드라이브와 1:1 정션(`mklink /J`)으로 즉시 연결됩니다.
 3. 구글 드라이브 `secrets/` 금고에 보관된 최신 `.env`와 `auth_state.json` 파일이 프로젝트 루트로 자동 복원됩니다.
 4. 모든 설정이 완료되어 기존 스크립트들을 즉시 실행할 수 있습니다.

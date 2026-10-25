@@ -9,3 +9,8 @@ browser_session/
 *.png
 /AGY_Artifacts/
 secrets/
+/My-Wiki/
+/Inbox_Raw/
+/Archive_Sources/
+/.agents/teamwork/
+*.egg-info/
