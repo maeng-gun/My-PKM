@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LINTER_PATH = (
     PROJECT_ROOT
     / ".agents"

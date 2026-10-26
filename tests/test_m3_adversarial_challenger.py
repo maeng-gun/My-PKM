@@ -9,7 +9,7 @@ import re
 import unittest
 from pathlib import Path
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 AGENTS_MD_PATH = PROJECT_ROOT / "AGENTS.md"
 SKILL_MD_PATH = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "SKILL.md"
 

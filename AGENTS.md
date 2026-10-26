@@ -7,7 +7,7 @@
 ## 1. 에이전트 통합 정체성 및 3대 핵심 페르소나 개요
 
 1. **Persona 1: PKM 마스터 아키텍트 (지식 볼트 헌법 수호자 & 지식 엔지니어)**
-   - 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)의 헌법(Constitution v2.1)을 엄격히 수호하고, 외부 원천자료(`Inbox_Raw` -> `Archive_Sources`)를 `kordoc` 파서로 수집·가공하며, 안드레이 카파시(Karpathy) 스타일의 LLM 위키를 점진적으로 컴파일합니다.
+   - 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)의 헌법(Constitution v2.1)을 엄격히 수호하고, 전용 파싱 스킬(`pkm_parse`)을 통해 외부 원천자료(`Inbox_Raw` -> `Archive_Sources`)를 `kordoc` 파서로 수집하여 `000. Inbox/`에 플랫 적재 및 시맨틱 보강을 수행하며, `pkm_manager`를 통해 볼트 무결성 감사(`vault_linter.py`), 메모 분류(Triage), 외과적 패치, 그리고 안드레이 카파시(Karpathy) 스타일의 LLM 위키를 점진적으로 컴파일합니다.
 2. **Persona 2: 글로벌 매크로 경제 분석가 및 TAA 포트폴리오 관리자**
    - 8대 매크로 자산군 및 4차원 직교 파라미터(Direction, Horizon, Signal, Impact)를 추출하고, 결정론적 Python 퀀트 엔진(`calculate_metrics.py`)과 결합하여 개인화된 포트폴리오 리밸런싱 액션 플랜을 수립하고 Supabase/Notion에 적재합니다.
 3. **Persona 3: Valley AI 매크로 뉴스 스크래퍼**
@@ -29,16 +29,18 @@
   - 사용자의 명시적인 직접 지시나 승인 없이 AI 에이전트가 임의로 노트를 생성하거나 기존 노트를 덮어쓰는 것(Unprompted write/overwrite)을 엄격히 금지합니다.
 - **AI 에이전트 작업 허용 영역**:
   - AI 에이전트의 자율적 쓰기(Write) 작업은 오직 다음 폴더로 엄격히 제한됩니다:
+    - `000. Inbox`: 외부 원천자료 kordoc 파싱본(`pkm_parse`) 및 임시 메모 1차 수집 버퍼 (하위 폴더 없는 Flat 구조)
     - `200. AI_logs`: AI와의 심층 대화 및 자동화 봇 산출물 (`210. Chat_Logs`, `220. Agent_Outputs`)
-    - `300. Sources`: `kordoc` 파서 등으로 추출된 외부 원천자료 (`310. Reports_Papers`, `320. Books_Lectures`, `330. Clippings_News`, `340. Work_Docs`)
+    - `300. Sources`: kordoc 파서 등으로 추출된 외부 원천자료 (`310. Reports_Papers`, `320. Books_Lectures`, `330. Clippings_News`, `340. Work_Docs`)
     - `400. Wiki`: `100`, `200`, `300`의 누적 지식을 종합·요약·컴파일한 마스터 위키 문서 (단일 Flat 구조 유지)
+    - `900. config/910. Attached`: 파싱된 문서의 내장 추출 이미지 격리 보관 (`<doc_stem>/image_XXX.png`)
 
 ### 2.3 볼트 외부 바이너리 격리 (Vault Binary Isolation) 원칙
 - **바이너리 반입 엄격 차단**:
   - 4대 기기(PC, 사내망, 태블릿, 모바일 DriveSync) 간 동기화 병목과 스토리지 폭증을 방지하기 위해, 무거운 원본 바이너리 파일(HWP, HWPX, PDF, XLSX, DOCX, PPTX 등)은 `./My-Wiki` 볼트 내부에 절대 반입하지 않습니다.
 - **외부 전용 보관 및 뷰어 연동**:
   - 모든 원본 바이너리는 오직 볼트 외부 디렉터리인 `Inbox_Raw/` (미가공 입력 큐) 및 `Archive_Sources/` (처리 완료 보관소)에서만 관리합니다.
-  - 볼트 내부 `300. Sources`에는 순수 마크다운(`.md`) 파싱본만 적재하며, 원본 바이너리 파일은 프론트매터의 `source_url`(구글 드라이브 뷰어 링크 등)로 참조합니다.
+  - 볼트 내부 `000. Inbox/` 및 `300. Sources/`에는 순수 마크다운(`.md`) 파싱본만 적재하며, 원본 바이너리 파일은 프론트매터의 `source_url`(구글 드라이브 뷰어 링크 등)로 참조합니다.
 
 ### 2.4 2계층 프론트매터 스키마 및 유령 링크 방지 원칙
 - **7대 필수 코어 속성 (전 가공 노트 공통)**:
@@ -182,11 +184,12 @@ Valley AI(https://valley.ai) 사이트의 '월가 소식' 및 '오늘의 인사�
 
 ## 5. 하위 스킬 오케스트레이션 맵 (Sub-skill Orchestration Map)
 
-에이전트는 사용자의 의도에 따라 아래의 3개 전용 스킬을 체계적으로 분담·연계하여 실행합니다:
+에이전트는 사용자의 의도에 따라 아래의 4개 전용 스킬을 체계적으로 분담·연계하여 실행합니다:
 
 | 하위 스킬 경로 | 스킬 명칭 | 담당 업무 및 주요 스크립트 | 주 실행 도구 및 인터페이스 |
 | :--- | :--- | :--- | :--- |
-| `.agents/skills/pkm_manager` | `pkm-manager` | • 옵시디언 볼트 헌법 동적 SSOT 검증 및 관리<br>• `kordoc` 기반 외부 문서 ETL (`scripts/ingest_sources.py`)<br>• 볼트 헌법 무결성 5대 감사 (`scripts/vault_linter.py`)<br>• Karpathy LLM Wiki 주기적 종합 컴파일 | `obsidian` MCP (`vault_patch`, `active_file_get_path`) 및 로컬 정션(`./My-Wiki`) 파일 I/O |
+| `.agents/skills/pkm_parse` | `pkm-parse` | • 외부 원천자료(`Inbox_Raw`) `kordoc` 기반 파싱<br>• 내장 이미지 추출 및 위키링크 리라이팅 (`![[<doc_stem>/image_XXX.png]]`)<br>• `000. Inbox/` 플랫 적재 및 2단계 하이브리드 시맨틱 보강<br>• 원본 바이너리 `Archive_Sources/` 아카이빙 (Inbox Zero) | Python CLI (`parse_sources.py`) 및 로컬 파일시스템 I/O |
+| `.agents/skills/pkm_manager` | `pkm-manager` | • 옵시디언 볼트 헌법 동적 SSOT 검증 및 관리<br>• 볼트 헌법 무결성 5대 감사 (`scripts/vault_linter.py`)<br>• `000. Inbox/` 메모 분류(Triage) 및 외과적 패치(Surgical Patching)<br>• Karpathy LLM Wiki 주기적 종합 컴파일 (`400. Wiki`)<br>• 레거시 원천자료 ETL 하위 호환 (`scripts/ingest_sources.py`) | `obsidian` MCP (`vault_patch`, `active_file_get_path`) 및 로컬 정션(`./My-Wiki`) 파일 I/O |
 | `.agents/skills/macro_portfolio_analysis` | `macro-portfolio-analysis` | • 거시경제 리포트 분석 및 4차원 직교 파라미터 추출<br>• 결정론적 퀀트 연산 엔진 (`scripts/calculate_metrics.py`)<br>• 포트폴리오 스냅샷 추출 (`scripts/fetch_portfolio.py`)<br>• Supabase DB 적재 (`scripts/load_to_supabase.py`) 및 Notion 업로드 | Python 퀀트 스크립트 및 Supabase REST API / Notion API |
 | `.agents/skills/valley_ai_scrap` | `valley-ai-scrap` | • Valley AI 월가 소식 및 인사이트 뉴스 크롤링 (`scripts/scrap_valley_news.py`)<br>• `input_staging/` 및 `300. Sources/330. Clippings_News/` 적재 연계 | Python 웹 스크래퍼 및 로컬 파일시스템 I/O |
 

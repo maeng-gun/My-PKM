@@ -1,13 +1,13 @@
 ---
 name: pkm-manager
-description: "My-PKM Master Architect Skill: kordoc 기반 외부 원천자료(HWP, HWPX, PDF, XLSX) 파싱 및 300. Sources 적재, 옵시디언 볼트 헌법 동적 SSOT 준수, 메모 분류/링크/외과적 패치, Karpathy LLM 위키 컴파일 및 vault_linter 볼트 무결성 감사"
+description: "My-PKM Master Architect Skill: 옵시디언 볼트 헌법 동적 SSOT 준수, 000. Inbox 메모 분류(Triage)/링크/외과적 패치, Karpathy LLM 위키 컴파일, vault_linter 볼트 무결성 감사 및 레거시 원천자료 ETL 하위 호환"
 ---
 
 # PKM Master Architect Skill (`pkm_manager`)
 
-본 스킬은 `My-PKM` 시스템의 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)와 외부 원천자료 수집 파이프라인(`Inbox_Raw` -> `Archive_Sources`)을 총괄 제어하는 지식 엔지니어링 마스터 스킬입니다.
+본 스킬은 `My-PKM` 시스템의 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)와 지식 엔지니어링 거버넌스를 총괄 제어하는 마스터 스킬입니다.
 
-에이전트는 이 스킬을 통해 **1) 헌법 SSOT 동적 사전 검증**, **2) kordoc 기반 외부 원천자료 ETL 및 적재**, **3) 메모 분류 및 외과적 패치(Surgical Patch)**, **4) 카파시(Karpathy) LLM 위키 컴파일 순환**, 그리고 **5) vault_linter 볼트 무결성 감사**를 체계적으로 수행합니다.
+에이전트는 이 스킬을 통해 **1) 헌법 SSOT 동적 사전 검증**, **2) 원천자료 Ingestion 거버넌스 및 레거시 ETL 하위 호환**, **3) 000. Inbox 메모 분류 및 외과적 패치(Surgical Patch)**, **4) 카파시(Karpathy) LLM 위키 컴파일 순환**, 그리고 **5) vault_linter 볼트 무결성 감사**를 체계적으로 수행합니다. 외부 원천자료의 `000. Inbox` 1차 파싱 및 내장 이미지 추출은 전용 파싱 스킬인 `pkm_parse`에 위임합니다.
 
 ---
 
@@ -106,11 +106,29 @@ updated: 2026-10-25     # String date: YYYY-MM-DD
 
 ---
 
-### Workflow 2: kordoc 기반 외부 원천자료 ETL 파이프라인 (`scripts/ingest_sources.py`)
-`Inbox_Raw/`에 들어온 HWP, HWPX, PDF, XLSX, DOCX, PPTX 등 미가공 바이너리를 `kordoc`으로 파싱하여 볼트 내부 `300. Sources/`에 마크다운으로 적재하고 원본을 아카이빙합니다.
+### Workflow 2: 외부 원천자료 Ingestion 거버넌스 및 레거시 ETL (`scripts/ingest_sources.py`)
+
+> [!NOTE]
+> **주 파싱 파이프라인 위임 안내**:
+> 외부 원천자료(`Inbox_Raw/`)의 1차 마크다운 변환, 도표 GFM 추출, 내장 이미지 추출(`910. Attached/<doc_stem>/`), 옵시디언 위키링크 임베드 리라이팅(`![[<doc_stem>/image_XXX.png]]`), `000. Inbox/` 플랫 적재, 및 Stage 2 시맨틱 메타데이터 보강은 전용 스킬인 **`pkm_parse` (`.agents/skills/pkm_parse/scripts/parse_sources.py`)**가 주관합니다.
+>
+> `pkm_manager` 내의 `scripts/ingest_sources.py`는 기존 레거시 호출자 및 단위/통합 테스트 스위트와의 100% 하위 호환성을 보장하기 위해 유지되며, 변환된 노트를 `./My-Wiki/300. Sources/{subfolder}/`로 직접 적재합니다.
+
+#### 1. 주 파싱 파이프라인 (`pkm_parse` 권장)
+```bash
+# pkm_parse를 통한 000. Inbox 플랫 적재 및 이미지 추출
+.\.venv\Scripts\python.exe .agents/skills/pkm_parse/scripts/parse_sources.py \
+  --file "Inbox_Raw/20261025_FOMC_Preview.pdf" \
+  --subfolder "310. Reports_Papers" \
+  --domain "macro" \
+  --table-format gfm
+```
+
+#### 2. 레거시 Ingestion 파이프라인 (`scripts/ingest_sources.py` 하위 호환)
+`Inbox_Raw/`에 들어온 HWP, HWPX, PDF, XLSX, DOCX, PPTX 등 미가공 바이너리를 `kordoc`으로 파싱하여 볼트 내부 `300. Sources/`에 마크다운으로 직접 적재하고 원본을 아카이빙합니다.
 
 ```bash
-# 단일 파일 수동 Ingestion 예시
+# 단일 파일 수동 Ingestion 예시 (300. Sources 직행)
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/ingest_sources.py \
   --file "Inbox_Raw/20261025_FOMC_Preview.pdf" \
   --subfolder "310. Reports_Papers" \
@@ -127,7 +145,7 @@ updated: 2026-10-25     # String date: YYYY-MM-DD
   --table-format gfm
 ```
 
-#### 세부 처리 절차
+#### 세부 처리 절차 (하위 호환)
 1. **문서 스캔 및 파싱**:
    - `Inbox_Raw/` 내의 바이너리 파일을 `kordoc` 엔진(Python SDK `KordocClient` 상주 워커 또는 Node CLI)을 호출하여 파싱합니다.
    - 표 구조는 `--table-format gfm` 옵션을 통해 GitHub Flavored Markdown 표로 깔끔하게 변환합니다. 이미지 OCR 필요 시 `--ocr` 플래그를 활성화합니다.

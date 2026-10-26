@@ -22,7 +22,7 @@ import time
 import unittest
 from pathlib import Path
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INGEST_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "scripts" / "ingest_sources.py"
 LINTER_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "scripts" / "vault_linter.py"
 

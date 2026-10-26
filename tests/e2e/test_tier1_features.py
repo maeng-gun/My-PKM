@@ -18,7 +18,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 GDRIVE_ROOT = Path(r"G:\내 드라이브")
 
 
@@ -616,6 +616,176 @@ class TestTier1F8VaultLinterCLI(unittest.TestCase):
                 "binary" in res.stdout.lower() or "c5" in res.stdout.lower() or "pdf" in res.stdout.lower(),
                 "Output must report heavy binary infiltration",
             )
+
+
+class TestTier1F9ParseSourcesCLI(unittest.TestCase):
+    """F9: parse_sources.py dedicated CLI, flat 000. Inbox/ staging & embedded image extraction."""
+
+    def setUp(self):
+        self.script_path = (
+            PROJECT_ROOT
+            / ".agents"
+            / "skills"
+            / "pkm_parse"
+            / "scripts"
+            / "parse_sources.py"
+        )
+        self.skill_path = (
+            PROJECT_ROOT
+            / ".agents"
+            / "skills"
+            / "pkm_parse"
+            / "SKILL.md"
+        )
+
+    def test_f9_01_script_exists_and_executable(self):
+        """Verify parse_sources.py exists in .agents/skills/pkm_parse/scripts/."""
+        self.assertTrue(
+            self.script_path.exists(),
+            f"parse_sources.py must exist at {self.script_path}",
+        )
+
+    def test_f9_02_cli_help_flag(self):
+        """Verify parse_sources.py --help exits with 0 and lists all 19 required flags."""
+        self.assertTrue(self.script_path.exists(), "parse_sources.py missing")
+        res = subprocess.run(
+            [sys.executable, str(self.script_path), "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        self.assertEqual(res.returncode, 0, f"parse_sources.py --help failed: {res.stderr}")
+        out = res.stdout.lower()
+        required_flags = [
+            "--file", "--inbox", "--vault", "--archive", "--subfolder",
+            "--domain", "--up", "--source-type", "--author", "--org",
+            "--published", "--ref-date", "--aliases", "--summary",
+            "--table-format", "--ocr", "--dry-run", "--force", "--verbose",
+        ]
+        for opt in required_flags:
+            self.assertIn(opt, out, f"parse_sources.py must support {opt}")
+
+    def test_f9_03_skill_md_contract(self):
+        """Verify .agents/skills/pkm_parse/SKILL.md exists with name: pkm-parse and workflows."""
+        self.assertTrue(
+            self.skill_path.exists(),
+            f"pkm_parse SKILL.md must exist at {self.skill_path}",
+        )
+        content = self.skill_path.read_text(encoding="utf-8")
+        self.assertIn("name: pkm-parse", content, "SKILL.md frontmatter must define name: pkm-parse")
+        self.assertTrue(
+            "ssot" in content.lower() or "dynamic" in content.lower(),
+            "SKILL.md must document dynamic SSOT pre-flight rule",
+        )
+
+    def test_f9_04_flat_inbox_placement(self):
+        """Verify generated notes are placed flat in 000. Inbox/<stem>.md without subdirectories."""
+        self.assertTrue(self.script_path.exists(), "parse_sources.py missing")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            inbox.mkdir(parents=True)
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+
+            sample = inbox / "flat_test_doc.txt"
+            sample.write_text("Sample text content for flat inbox placement.", encoding="utf-8")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(self.script_path),
+                    "--file", str(sample),
+                    "--inbox", str(inbox),
+                    "--vault", str(vault),
+                    "--archive", str(archive),
+                    "--subfolder", "310. Reports_Papers",
+                    "--domain", "macro",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, f"parse_sources failed: {res.stderr}")
+            expected_note = vault / "000. Inbox" / "flat_test_doc.md"
+            self.assertTrue(expected_note.exists(), f"Note must reside flat in 000. Inbox/: {expected_note}")
+            # Ensure no subdirectories under 000. Inbox
+            inbox_subdirs = [p for p in (vault / "000. Inbox").iterdir() if p.is_dir()]
+            self.assertEqual(len(inbox_subdirs), 0, "000. Inbox must not contain subdirectories")
+
+    def test_f9_05_clean_null_empty_brackets(self):
+        """Verify unanchored notes or ghost links produce clean empty brackets up: []."""
+        self.assertTrue(self.script_path.exists(), "parse_sources.py missing")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            inbox.mkdir(parents=True)
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+
+            sample = inbox / "clean_null_doc.txt"
+            sample.write_text("Unanchored note content.", encoding="utf-8")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(self.script_path),
+                    "--file", str(sample),
+                    "--inbox", str(inbox),
+                    "--vault", str(vault),
+                    "--archive", str(archive),
+                    "--domain", "macro",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0)
+            note_path = vault / "000. Inbox" / "clean_null_doc.md"
+            self.assertTrue(note_path.exists())
+            content = note_path.read_text(encoding="utf-8")
+            self.assertIn("up: []", content, "Unanchored note must format up as empty array []")
+            self.assertNotIn('"[[]]"', content, "Frontmatter must never contain ghost links")
+
+    def test_f9_06_inbox_zero_movement_to_archive(self):
+        """Verify raw source file is removed from Inbox_Raw and archived (Inbox Zero)."""
+        self.assertTrue(self.script_path.exists(), "parse_sources.py missing")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            inbox.mkdir(parents=True)
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+
+            sample = inbox / "inbox_zero_test.txt"
+            sample.write_text("Content to archive.", encoding="utf-8")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(self.script_path),
+                    "--file", str(sample),
+                    "--inbox", str(inbox),
+                    "--vault", str(vault),
+                    "--archive", str(archive),
+                    "--subfolder", "310. Reports_Papers",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0)
+            self.assertFalse(sample.exists(), "Raw file must be deleted from Inbox_Raw (Inbox Zero)")
+            archived = archive / "310. Reports_Papers" / "inbox_zero_test.txt"
+            self.assertTrue(archived.exists(), f"Raw file must be moved to {archived}")
 
 
 if __name__ == "__main__":

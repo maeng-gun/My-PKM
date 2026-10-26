@@ -12,25 +12,35 @@ Specification Sources:
 - PKM Constitution v2.1 (Rule 1, Rule 2, Rule 7)
 """
 
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INGEST_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "scripts" / "ingest_sources.py"
 LINTER_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "scripts" / "vault_linter.py"
+PARSE_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "pkm_parse" / "scripts" / "parse_sources.py"
+REFERENCE_PDF = (
+    PROJECT_ROOT
+    / "Archive_Sources"
+    / "310. Reports_Papers"
+    / "밸리AI 산업 딥다이브_주가에 펀더멘털을 맞추지 말자_2026년 10월.pdf"
+)
 
 
 class TestTier4Scenarios(unittest.TestCase):
     """Tier 4 Real-World Application Scenario Test Suite."""
 
-    def _require_tools(self):
+    def _require_tools(self, require_parse: bool = False):
         if not INGEST_SCRIPT.exists():
             self.fail(f"ingest_sources.py not found at {INGEST_SCRIPT}. Feature M4 pending.")
         if not LINTER_SCRIPT.exists():
             self.fail(f"vault_linter.py not found at {LINTER_SCRIPT}. Feature M4 pending.")
+        if require_parse and not PARSE_SCRIPT.exists():
+            self.fail(f"parse_sources.py not found at {PARSE_SCRIPT}. Feature M1 pending.")
 
     def test_s01_full_lifecycle_ingest_and_audit_simulation(self):
         """Scenario 1: Complete End-to-End Simulation:
@@ -255,6 +265,126 @@ Key takeaway: Soft landing scenario remains the baseline.
             # Vault Linter run across whole vault
             linter_res = subprocess.run([sys.executable, str(LINTER_SCRIPT), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8", errors="replace", check=False)
             self.assertEqual(linter_res.returncode, 0, f"Multi-folder vault must pass linter: {linter_res.stdout}")
+
+    def test_s05_pkm_parse_to_inbox_and_linter_pass(self):
+        """Scenario 5: Dedicated pkm_parse End-to-End Simulation:
+
+        1. Drop raw document with embedded images in Inbox_Raw.
+        2. Run parse_sources.py with 19-flag compliant arguments.
+        3. Verify note created flat in 000. Inbox/<stem>.md with 2-tier YAML frontmatter.
+        4. Verify embedded images extracted to 900. config/910. Attached/<stem>/image_XXX.png.
+        5. Verify note body rewrites image links to native Obsidian wikilink embeds ![[<stem>/image_XXX.png]].
+        6. Verify source binary moved to Archive_Sources/<subfolder>/ (Inbox Zero).
+        7. Run vault_linter.py --include-inbox --vault <vault> and verify 100% PASS with 0 violations.
+        """
+        self._require_tools(require_parse=True)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+            inbox.mkdir(parents=True)
+            (vault / "400. Wiki").mkdir(parents=True)
+
+            # Master hub anchor
+            (vault / "400. Wiki" / "02_매크로 분석.md").write_text(
+                "---\norigin: wiki\ntype: hub\nlevel: 1\ndomain: [macro]\nup: []\nstatus: active\ncreated: 2026-10-25\nupdated: 2026-10-25\n---\n# 02_매크로 분석",
+                encoding="utf-8",
+            )
+
+            doc_stem = "industry_deepdive_2026"
+            raw_doc = inbox / f"{doc_stem}.pdf"
+
+            if REFERENCE_PDF.exists():
+                shutil.copy2(str(REFERENCE_PDF), str(raw_doc))
+            else:
+                raw_doc.write_bytes(b"%PDF-1.4 dummy binary with image")
+
+            # Step 1: Run parse_sources CLI
+            parse_cmd = [
+                sys.executable,
+                str(PARSE_SCRIPT),
+                "--file", str(raw_doc),
+                "--inbox", str(inbox),
+                "--vault", str(vault),
+                "--archive", str(archive),
+                "--subfolder", "310. Reports_Papers",
+                "--domain", "macro",
+                "--up", "[[02_매크로 분석]]",
+                "--source-type", "report",
+                "--author", "[[Valley AI]]",
+                "--org", "[[Valley AI Inc]]",
+                "--published", "2026-10",
+                "--table-format", "gfm",
+            ]
+            parse_res = subprocess.run(
+                parse_cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(
+                parse_res.returncode,
+                0,
+                f"parse_sources.py failed: {parse_res.stderr}\nOutput: {parse_res.stdout}",
+            )
+
+            # Step 2: Validate Note Placement Flat in 000. Inbox/
+            out_note = vault / "000. Inbox" / f"{doc_stem}.md"
+            self.assertTrue(out_note.exists(), f"Note must reside flat in 000. Inbox: {out_note}")
+
+            # Verify no subdirectories inside 000. Inbox
+            inbox_subdirs = [p for p in (vault / "000. Inbox").iterdir() if p.is_dir()]
+            self.assertEqual(len(inbox_subdirs), 0, "000. Inbox must maintain flat single-level structure")
+
+            # Step 3: Validate Archival and Inbox Zero
+            self.assertFalse(raw_doc.exists(), "Raw binary must be deleted from Inbox_Raw (Inbox Zero)")
+            archived_doc = archive / "310. Reports_Papers" / f"{doc_stem}.pdf"
+            self.assertTrue(archived_doc.exists(), f"Raw binary must be archived at {archived_doc}")
+
+            # Step 4: Validate Frontmatter and Image Embeds
+            note_content = out_note.read_text(encoding="utf-8")
+            self.assertIn("origin: source", note_content)
+            self.assertIn("type: source", note_content)
+            self.assertIn('up: ["[[02_매크로 분석]]"]', note_content)
+            self.assertIn("source_url: Archive_Sources/310. Reports_Papers/", note_content)
+            self.assertNotIn('"[[]]"', note_content, "Frontmatter must never contain ghost links")
+
+            # Validate Image Extraction and Embeds if reference PDF was used
+            attached_dir = vault / "900. config" / "910. Attached" / doc_stem
+            if REFERENCE_PDF.exists():
+                self.assertTrue(attached_dir.exists(), f"Attached directory must exist at {attached_dir}")
+                images = list(attached_dir.glob("image_*.png"))
+                self.assertGreater(len(images), 0, "At least one image must be extracted to 910. Attached")
+                expected_wikilink = f"![[{doc_stem}/{images[0].name}]]"
+                self.assertIn(
+                    expected_wikilink,
+                    note_content,
+                    f"Note body must contain native Obsidian wikilink embed {expected_wikilink}",
+                )
+
+            # Step 5: Vault Constitutional Linter Audit with --include-inbox
+            linter_cmd = [
+                sys.executable,
+                str(LINTER_SCRIPT),
+                "--vault", str(vault),
+                "--include-inbox",
+            ]
+            linter_res = subprocess.run(
+                linter_cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(
+                linter_res.returncode,
+                0,
+                f"vault_linter with --include-inbox must pass with 0 errors:\n{linter_res.stdout}\nErrors: {linter_res.stderr}",
+            )
 
 
 if __name__ == "__main__":

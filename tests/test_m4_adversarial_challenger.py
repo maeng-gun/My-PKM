@@ -17,7 +17,7 @@ import tempfile
 import unittest
 import yaml
 
-PROJECT_ROOT = Path(r"c:\Users\maeng-gun\Desktop\python\My_PKM")
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INGEST_SCRIPT = (
     PROJECT_ROOT
     / ".agents"
