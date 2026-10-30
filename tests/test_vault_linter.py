@@ -217,6 +217,69 @@ class TestVaultLinterUnit(unittest.TestCase):
             self.assertEqual(res2.returncode, 1)
             self.assertIn("OrphanConcept.md", res2.stdout)
 
+    def test_check_c3_orphan_wiki_case_and_l1_exemption(self):
+        """Verify C3 exempts Lv1 hubs and case/event wikis with up: [] in 400. Wiki,
+        while rejecting Lv2/Lv3/Lv4 and 100. Concepts with up: []."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            vault = Path(tmpdir) / "Vault"
+            wiki_dir = vault / "400. Wiki"
+            concept_dir = vault / "100. Concepts"
+            wiki_dir.mkdir(parents=True)
+            concept_dir.mkdir(parents=True)
+
+            # Lv1 Hub in 400. Wiki with up: [] -> EXEMPT
+            (wiki_dir / "C1_AI 반도체.md").write_text(
+                "---\norigin: wiki\ntype: hub\nlevel: 1\ndomain: [equity]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# C1",
+                encoding="utf-8",
+            )
+            # Case/event wiki in 400. Wiki with up: [] -> EXEMPT
+            (wiki_dir / "2026 금통위 동결 논란.md").write_text(
+                "---\norigin: wiki\ntype: analysis\ndomain: [macro]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# Case Wiki",
+                encoding="utf-8",
+            )
+            # Audit passes for Lv1 hub and case wiki
+            res = subprocess.run([sys.executable, str(LINTER_PATH), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res.returncode, 0, f"Lv1 and Case wiki with up: [] must pass C3: {res.stdout}")
+
+            # Lv3 Sub-industry with up: [] -> VIOLATION
+            (wiki_dir / "산업_반도체.md").write_text(
+                "---\norigin: wiki\ntype: concept\nlevel: 3\ndomain: [equity]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# Sub-industry",
+                encoding="utf-8",
+            )
+            res_lv3 = subprocess.run([sys.executable, str(LINTER_PATH), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res_lv3.returncode, 1)
+            self.assertIn("산업_반도체.md", res_lv3.stdout)
+
+            # Lv2 Stage with up: [] -> VIOLATION
+            (wiki_dir / "산업_반도체.md").unlink()
+            (wiki_dir / "C1-S1_AI 가속기 및 서버.md").write_text(
+                "---\norigin: wiki\ntype: concept\nlevel: 2\ndomain: [equity]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# Stage",
+                encoding="utf-8",
+            )
+            res_lv2 = subprocess.run([sys.executable, str(LINTER_PATH), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res_lv2.returncode, 1)
+            self.assertIn("C1-S1_AI 가속기 및 서버.md", res_lv2.stdout)
+
+            # Lv4 Company with up: [] -> VIOLATION
+            (wiki_dir / "C1-S1_AI 가속기 및 서버.md").unlink()
+            (wiki_dir / "기업_삼성전자.md").write_text(
+                "---\norigin: wiki\ntype: entity\nlevel: 4\ndomain: [equity]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# Company",
+                encoding="utf-8",
+            )
+            res_lv4 = subprocess.run([sys.executable, str(LINTER_PATH), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res_lv4.returncode, 1)
+            self.assertIn("기업_삼성전자.md", res_lv4.stdout)
+
+            # 100. Concepts with up: [] -> VIOLATION
+            (wiki_dir / "기업_삼성전자.md").unlink()
+            (concept_dir / "인간통찰.md").write_text(
+                "---\norigin: human\ntype: concept\ndomain: [theory]\nup: []\nstatus: active\ncreated: 2026-10-30\nupdated: 2026-10-30\n---\n# Human Insight",
+                encoding="utf-8",
+            )
+            res_concept = subprocess.run([sys.executable, str(LINTER_PATH), "--vault", str(vault)], capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(res_concept.returncode, 1)
+            self.assertIn("인간통찰.md", res_concept.stdout)
+
     def test_check_c4_folder_origin_mismatch(self):
         """Verify C4 detects origin attribute mismatch with folder prefix."""
         with tempfile.TemporaryDirectory() as tmpdir:

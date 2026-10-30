@@ -13,18 +13,20 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
 
 ## 1. 지식 볼트 헌법 및 핵심 거버넌스 원칙
 
-본 스킬은 옵시디언 볼트 헌법(Obsidian Vault Constitution v2.1)과 SSOT(Single Source of Truth) 규정을 엄격히 준수합니다.
+본 스킬은 옵시디언 볼트 단일 마스터 헌법(`./My-Wiki/My-Wiki Rules.md`) 규정을 엄격히 준수합니다.
 
 ### 1.1 실시간 SSOT 동적 사전 검증 (Dynamic SSOT Pre-flight) 원칙
-- **사전 필수 검증**: 에이전트는 문서 파싱, 프론트매터 메타데이터 추론 및 보강(Semantic Enrichment), 또는 메모 분류를 수행하기 전에 반드시 다음 2개의 마스터 문서를 실시간 SSOT로 먼저 읽고 최신 규칙을 확인해야 합니다:
-  1. `./My-Wiki/400. Wiki/PKM 아키텍처.md` (복합 지식의 5차원 직교 구조화 및 상속 규칙)
-  2. `./My-Wiki/400. Wiki/옵시디언 메모간 링크 연결 규칙 설계.md` (볼트 아키텍처 및 링크 설계 10대 마스터 규칙 v2.1)
-- **7대 표준 도메인 코드**: `theory`, `macro`, `equity`, `portfolio`, `work`, `ai-pkm`, `education` 중 주 도메인 1개, 교차 성격 시 부 도메인 1개(최대 2개, "1+1" Rule) 부여.
-- **7대 표준 노트 역할 (`type`)**: `hub`, `concept`, `analysis`, `entity`, `source`, `project`, `log`.
+- **순수 동적 포인터 사전 검증**: 에이전트는 문서 파싱, 프론트매터 메타데이터 추론 및 시맨틱 보강(Semantic Enrichment), 또는 메모 분류를 수행하기 전에 반드시 `constitution_loader.py`를 통해 단일 마스터 헌법(`./My-Wiki/My-Wiki Rules.md`)과 위키 인덱스의 최신 규칙을 실시간 확인해야 합니다:
+  ```bash
+  # 최신 프론트매터 스키마, 표준 도메인 코드, 노트 역할(type) 런타임 조회
+  .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section schema
+  ```
+- **직계 1촌 상위 위키 인덱스 참조**: `./My-Wiki/500. Index/_인덱스_400_Wiki.md`를 실시간 스캔하여 직계 1촌 상위 위키 `up` 매칭을 수행합니다.
+- **표준 도메인 및 역할 코드 준수**: `constitution_loader.py --section schema`가 반환하는 최신 표준 도메인 목록(주 1 + 부 1, 최대 2개)과 허용 노트 역할(`type`)을 엄격히 적용합니다.
 
 ### 1.2 인간 주권 보호 (Human Write Sovereignty) 원칙
-- `100. Concepts` (`110. Notes`, `120. Logs`) 및 `500. etc` 폴더는 사용자의 고유 사유와 투자 철학이 담긴 **인간 주권 영역**입니다.
-- AI 파서(`parse_sources.py`) 및 에이전트는 사용자의 명시적인 직접 지시나 승인 없이 `100. Concepts`나 `500. etc`에 임의로 파일을 생성하거나 덮어쓰는(Unprompted write/overwrite) 것을 절대 금지합니다.
+- `100. Concepts` 및 `600. etc`(구 `500. etc`) 폴더는 사용자의 고유 사유와 투자 철학이 담긴 **인간 주권 영역**입니다.
+- AI 파서(`parse_sources.py`) 및 에이전트는 사용자의 명시적인 직접 지시나 승인 없이 `100. Concepts`나 `600. etc`에 임의로 파일을 생성하거나 덮어쓰는(Unprompted write/overwrite) 것을 절대 금지합니다.
 - `pkm_parse`의 산출물은 오직 임시 수집 버퍼인 `./My-Wiki/000. Inbox/`로만 제한 적재됩니다.
 
 ### 1.3 볼트 외부 바이너리 격리 (Vault Binary Isolation) 및 구글 드라이브 원클릭 링크 (`source_url`) 원칙
@@ -48,12 +50,11 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
   - Stage 1 결정론적 2계층 프론트매터 생성 및 `000. Inbox/<stem>.md` 플랫 적재
   - `Archive_Sources/`로의 원본 바이너리 안전 이동 (Inbox Zero 달성)
   - Stage 2 AI 에이전트 시맨틱 보강(Semantic Enrichment) 프로토콜 수행
-- **`pkm_manager`의 소유 영역**:
-  - 볼트 헌법 무결성 5대 감사 (`vault_linter.py`)
-  - `000. Inbox/`에서 영구 폴더(`100. Concepts`, `200. AI_logs`, `300. Sources`)로의 메모 분류(Triage)
-  - 외과적 정밀 패치 (Surgical Patching via Obsidian MCP / 로컬 I/O)
-  - 카파시(Karpathy) 스타일 LLM 위키 주기적 종합 컴파일 (`400. Wiki`)
-  - 하위 호환성 유지용 레거시 스크립트(`ingest_sources.py`) 보존
+- **`pkm_manager`의 소유 영역 (투트랙 핸드오프)**:
+  - `My-Wiki/My-Wiki Rules.md` 동적 SSOT 로드(`constitution_loader.py`) 및 볼트 헌법 무결성 감사(`vault_linter.py`)
+  - `000. Inbox/` 대기 메모(본 `pkm_parse`가 적재한 원천자료 파싱본 포함)의 **1차 인박스 컴파일 및 역추적 재컴파일(프론트매터 정규화 ➔ `400. Wiki` 증분/신규 컴파일 ➔ 폴더 이동 및 `500. Index` 등재 ➔ 기존 노트 역추적 재컴파일)**
+  - **2차 상향 메타 컴파일** 및 `compile_helper.py` 기반 인덱스/클러스터 관리
+  - **투트랙 연계**: 평상시 `pkm_parse`는 `000. Inbox/` 적재(Stage 1~2) 후 대기하며, 사용자가 파싱과 동시에 위키 컴파일을 요청할 경우 즉시 `pkm_manager`의 컴파일 파이프라인으로 원스톱 핸드오프합니다.
 
 ---
 
@@ -70,7 +71,7 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
 │  - kordoc 텍스트/표/이미지 추출 (GFM 테이블, OCR 선택)       │
 │  - 이미지 저장: My-Wiki/900. config/910. Attached/<doc_stem>/ │
 │  - 본문 위키링크 리라이팅: ![[<doc_stem>/image_XXX.png]]     │
-│  - 7대 코어 속성 + Clean Null + 기본 source 확장 속성 생성  │
+│  - 헌법 필수 코어 속성 + Clean Null + 기본 source 확장 속성 생성 │
 │  - My-Wiki/000. Inbox/<doc_stem>.md 플랫 적재               │
 │  - Archive_Sources/ 아카이빙 (Inbox Zero)                   │
 │  - source_url: https://drive.google.com/open?id=<ID>&usp=drive_fs │
@@ -79,9 +80,9 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Stage 2: AI 에이전트 시맨틱 보강 (Semantic Enrichment)       │
-│  - 동적 SSOT 문서 사전 확인 (PKM 아키텍처.md, 링크 규칙.md) │
+│  - 동적 SSOT 문서 사전 확인 (My-Wiki Rules.md, _인덱스_400_Wiki)│
 │  - 000. Inbox/<doc_stem>.md 문서 목차/핵심 요약 분석        │
-│  - 정밀 도메인(7대 코드 중 1+1) 및 1촌 부모 up 위키링크 추론│
+│  - 헌법 최신 도메인 코드(1+1) 및 1촌 부모 up 위키링크 추론 │
 │  - author, org, published, aliases, summary, source_url 확인 │
 │  - 외과적 패치(Surgical Patch)로 프론트매터 반영            │
 │  - vault_linter.py --include-inbox 무결성 검증              │
@@ -134,7 +135,7 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
    - 마크다운 본문의 `![alt](url)` 및 `<img src="...">` 태그는 모두 옵시디언 네이티브 임베드인 `![[<doc_stem>/image_XXX.png]]`로 자동 변환됩니다.
    - 이미지 추출 완료 후 임시 디렉터리는 잔여 파일 없이 원자적으로 정리(Cleanup)됩니다.
 3. **2계층 프론트매터 자동 결합 (Clean Null 준수)**:
-   - 7대 코어 속성(`origin: source`, `type: source`, `domain`, `up`, `status: active`, `created`, `updated`)을 구성합니다.
+   - constitution_loader.py가 제공하는 최신 필수 코어 속성을 구성합니다.
    - `--up`이 지정되지 않았거나 빈 대괄호인 경우 유령 링크 `"[[]]"`를 생성하지 않고 엄격히 `up: []`로 출력합니다.
    - 확장 속성(`source_type`, `author`, `org`, `published`, `ref_date`, `aliases`, `summary`, `source_url`)을 결합합니다.
 4. **`000. Inbox/` 플랫 적재, 아카이빙(Inbox Zero) 및 구글 드라이브 `source_url` 연결**:
@@ -148,17 +149,17 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
 
 Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 노트의 메타데이터를 지능적으로 보강합니다.
 
-#### Step 1: 동적 SSOT 마스터 문서 읽기 (Pre-flight)
-에이전트는 볼트 내 최신 규칙을 확인합니다:
-- `view_file`로 `./My-Wiki/400. Wiki/PKM 아키텍처.md` 및 `./My-Wiki/400. Wiki/옵시디언 메모간 링크 연결 규칙 설계.md` 확인.
-- 도메인 정의 및 계층 구조(1촌 부모 위키)의 최신 상태 파악.
+#### Step 1: 동적 SSOT 마스터 헌법 및 위키 인덱스 읽기 (Pre-flight)
+에이전트는 볼트 내 최신 규칙과 위키 트리를 확인합니다:
+- `read_file`로 `./My-Wiki/My-Wiki Rules.md` 및 `./My-Wiki/500. Index/_인덱스_400_Wiki.md` 확인.
+- 도메인 정의 및 계층 구조(직계 1촌 상위 위키 `up` 후보)의 최신 상태 파악.
 
 #### Step 2: 파싱된 노트 본문 검토
 - `view_file`을 통해 `./My-Wiki/000. Inbox/<doc_stem>.md`의 상단 프론트매터, 제목, 목차, 서론, 요약 문단을 읽습니다.
 
 #### Step 3: 시맨틱 메타데이터 정밀 추론
 1. **도메인 (`domain`)**:
-   - 7대 표준 도메인(`theory`, `macro`, `equity`, `portfolio`, `work`, `ai-pkm`, `education`) 중 문서의 주제와 가장 밀접한 주 도메인 1개(+ 교차 성격 시 부 도메인 1개)를 결정합니다.
+   - `constitution_loader.py --vault ./My-Wiki --section schema`로 확인한 최신 표준 도메인 목록 중 문서의 주제와 가장 밀접한 주 도메인 1개(+ 교차 성격 시 부 도메인 1개)를 결정합니다.
 2. **직계 1촌 부모 (`up`)**:
    - 동일 도메인 축의 직계 1촌 상위 개념 위키 문서(예: `"[[02_매크로 분석]]"`, `"[[03_산업 및 기업분석]]"`, `"[[글로벌 매크로 동향]]"`)를 지정합니다. 독립적인 원천자료로서 부모 연결이 불필요한 경우 `[]`를 유지합니다. (조상 노트를 건너뛰는 Hairball 직결 금지).
 3. **문서 메타데이터 확장 및 `source_url` 구글 드라이브 링크 검증**:
@@ -178,7 +179,7 @@ Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 
 ```bash
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/vault_linter.py --vault ./My-Wiki --include-inbox
 ```
-- 모든 가공 노트의 7대 코어 속성(C1), 유령 링크 부재(C2), 고립 여부(C3), origin 정합성(C4), 바이너리 격리(C5)가 100% 통과되는지 확인합니다.
+- 볼트 린터(`vault_linter.py`)를 통해 모든 가공 노트의 필수 코어 속성(C1), 유령 링크 부재(C2), 고립 여부(C3), origin 정합성(C4), 바이너리 격리(C5)가 100% 통과되는지 확인합니다.
 
 ---
 
@@ -193,7 +194,7 @@ Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 
 | 3 | `--vault` | `str` | `./My-Wiki` | 옵시디언 볼트 루트 경로. |
 | 4 | `--archive` | `str` | `./Archive_Sources` | 파싱 완료된 원본 바이너리를 이동 보관할 아카이브 루트 경로. |
 | 5 | `--subfolder` | `str` | `None` | 아카이브 내 분류 하위 폴더 (`310. Reports_Papers` 등). 볼트 노트는 이에 영향받지 않고 `000. Inbox`에 플랫 저장됨. |
-| 6 | `--domain` | `str` | `macro` | 7대 표준 도메인 코드 (쉼표 구분 최대 2개 지원). |
+| 6 | `--domain` | `str` | `macro` | 표준 도메인 코드 (쉼표 구분 최대 2개 지원, constitution_loader 실시간 연동). |
 | 7 | `--up` | `str` | `None` | 직계 1촌 부모 위키링크 (`"[[02_매크로 분석]]"`). 생략되거나 빈 대괄호 입력 시 clean null `[]`로 정규화. |
 | 8 | `--source-type` | `str` | `report` | 원천 문서 유형 (`report`, `paper`, `book`, `clipping`, `work_doc`, `presentation`, `news`). |
 | 9 | `--author` | `str` | `None` | 저자 엔티티 명칭 또는 위키링크. |
@@ -216,7 +217,7 @@ Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 
 
 ```yaml
 ---
-# Tier 1: 7대 필수 코어 속성 (Core Mandatory)
+# Tier 1: 필수 코어 속성 (Core Mandatory - My-Wiki Rules.md 실시간 동적 SSOT 준수)
 origin: source                  # Enum: [source] (000. Inbox staging buffer)
 type: source                    # Enum: [source]
 domain:                         # List of standard domains (1~2개 "1+1" Rule)

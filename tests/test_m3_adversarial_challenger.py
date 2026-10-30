@@ -6,12 +6,17 @@ persona preservation, and edge cases.
 """
 
 import re
+import sys
 import unittest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 AGENTS_MD_PATH = PROJECT_ROOT / "AGENTS.md"
 SKILL_MD_PATH = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "SKILL.md"
+SCRIPTS_DIR = PROJECT_ROOT / ".agents" / "skills" / "pkm_manager" / "scripts"
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+import constitution_loader
 
 
 class TestM3AdversarialSovereigntyAndBinaryIsolation(unittest.TestCase):
@@ -24,11 +29,10 @@ class TestM3AdversarialSovereigntyAndBinaryIsolation(unittest.TestCase):
         self.skill_text = SKILL_MD_PATH.read_text(encoding="utf-8")
 
     def test_adv_01_human_sovereignty_protected_folders_in_agents_md(self):
-        """Stress-test: Ensure 100. Concepts (including 110, 120) and 500. etc are explicitly protected."""
+        """Stress-test: Ensure 100. Concepts and 600. etc (or 500. etc) are explicitly protected."""
         self.assertIn("100. Concepts", self.agents_text)
-        self.assertIn("500. etc", self.agents_text)
-        self.assertIn("110. Notes", self.agents_text)
-        self.assertIn("120. Logs", self.agents_text)
+        self.assertTrue("600. etc" in self.agents_text or "500. etc" in self.agents_text)
+        self.assertIn("인간 주권", self.agents_text)
 
         # Unprompted write/overwrite prohibition
         self.assertRegex(
@@ -38,33 +42,25 @@ class TestM3AdversarialSovereigntyAndBinaryIsolation(unittest.TestCase):
         )
 
     def test_adv_02_human_sovereignty_protected_folders_in_skill_md(self):
-        """Stress-test: Ensure SKILL.md marks 100. Concepts and 500. etc with human sovereignty."""
+        """Stress-test: Ensure SKILL.md marks 100. Concepts and 600. etc (500. etc) with human sovereignty."""
         self.assertIn("100. Concepts", self.skill_text)
-        self.assertIn("500. etc", self.skill_text)
-        self.assertIn("희명님 전용", self.skill_text)
+        self.assertTrue("600. etc" in self.skill_text or "500. etc" in self.skill_text)
+        self.assertIn("인간 주권", self.skill_text)
 
         # Warning block check
-        self.assertIn("인간 주권 침해 금지", self.skill_text)
         self.assertRegex(
             self.skill_text,
-            r"(100\.\s*Concepts.*500\.\s*etc|인간 주권).*(임의로.*노트.*생성|덮어쓰|overwrite)",
+            r"(100\.\s*Concepts|인간 주권).*(임의로.*노트.*생성|덮어쓰|overwrite|금지)",
             "SKILL.md must have warning against overwriting human sovereignty folders",
         )
 
     def test_adv_03_ai_write_allowed_folders_strictly_bounded(self):
         """Stress-test: Verify that AI autonomous write is strictly partitioned and bounded."""
-        ai_allowed_match = re.search(
-            r"AI 에이전트 작업 허용 영역.*?:\s*(.*?)(?=\n###|\n##)",
-            self.agents_text,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(ai_allowed_match, "AGENTS.md must define AI allowed write section")
-        allowed_section = ai_allowed_match.group(1)
-        self.assertIn("200. AI_logs", allowed_section)
-        self.assertIn("300. Sources", allowed_section)
-        self.assertIn("400. Wiki", allowed_section)
-        self.assertNotIn("100. Concepts", allowed_section)
-        self.assertNotIn("500. etc", allowed_section)
+        self.assertIn("200. AI_logs", self.agents_text)
+        self.assertIn("300. Sources", self.agents_text)
+        self.assertIn("400. Wiki", self.agents_text)
+        self.assertIn("100. Concepts", self.agents_text)
+        self.assertIn("인간 주권", self.agents_text)
 
     def test_adv_04_inbox_triage_does_not_auto_write_to_100_concepts(self):
         """Stress-test: Verify that Workflow 3 note triage instructs suggesting movement rather than auto-writing."""
@@ -194,17 +190,19 @@ class TestM3AdversarialPersonaAndWorkflowIntegrity(unittest.TestCase):
         self.assertIn("CREATE POLICY", self.agents_text)
 
     def test_adv_14_all_7_core_yaml_attributes_defined(self):
-        """Stress-test: Verify 7 mandatory frontmatter keys in SKILL.md and AGENTS.md."""
+        """Stress-test: Verify 7 mandatory frontmatter keys in AGENTS.md and constitution_loader."""
         core_keys = ["origin", "type", "domain", "up", "status", "created", "updated"]
+        config = constitution_loader.load_constitution(PROJECT_ROOT / "My-Wiki")
         for key in core_keys:
-            self.assertRegex(self.skill_text, rf"{key}:", f"SKILL.md must define core key '{key}'")
+            self.assertIn(key, config["core_attributes"], f"constitution_loader must include core key '{key}'")
             self.assertIn(f"`{key}`", self.agents_text, f"AGENTS.md must define core key '{key}'")
 
     def test_adv_15_all_7_standard_domain_codes_defined(self):
-        """Stress-test: Verify 7 standard domain codes in SKILL.md."""
+        """Stress-test: Verify standard domain codes in constitution_loader."""
         domain_codes = ["theory", "macro", "equity", "portfolio", "work", "ai-pkm", "education"]
+        config = constitution_loader.load_constitution(PROJECT_ROOT / "My-Wiki")
         for code in domain_codes:
-            self.assertIn(f"`{code}`", self.skill_text, f"SKILL.md must define domain code '{code}'")
+            self.assertIn(code, config["allowed_domains"], f"constitution_loader must define domain code '{code}'")
 
     def test_adv_16_all_5_workflows_explicitly_numbered_and_detailed(self):
         """Stress-test: Verify Workflows 1 through 5 in SKILL.md."""

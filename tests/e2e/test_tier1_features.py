@@ -170,14 +170,14 @@ class TestTier1F3PKMRootJunctions(unittest.TestCase):
         self.assertTrue(folder_path.is_dir(), "./Archive_Sources must be an accessible directory")
 
     def test_f3_04_pkm_ssot_documents_accessible_via_local_junction(self):
-        """Verify SSOT documents PKM 아키텍처.md and 옵시디언 링크 연결 규칙 설계.md are readable via local junction."""
-        wiki_root = PROJECT_ROOT / "My-Wiki" / "400. Wiki"
-        arch_doc = wiki_root / "PKM 아키텍처.md"
-        rules_doc = wiki_root / "옵시디언 메모간 링크 연결 규칙 설계.md"
-        self.assertTrue(arch_doc.exists(), f"SSOT doc missing at {arch_doc}")
+        """Verify SSOT documents My-Wiki Rules.md and _인덱스_400_Wiki.md are readable via local junction."""
+        vault_root = PROJECT_ROOT / "My-Wiki"
+        rules_doc = vault_root / "My-Wiki Rules.md"
+        index_doc = vault_root / "500. Index" / "_인덱스_400_Wiki.md"
         self.assertTrue(rules_doc.exists(), f"SSOT doc missing at {rules_doc}")
-        self.assertGreater(len(arch_doc.read_text(encoding="utf-8")), 100)
+        self.assertTrue(index_doc.exists(), f"SSOT doc missing at {index_doc}")
         self.assertGreater(len(rules_doc.read_text(encoding="utf-8")), 100)
+        self.assertGreater(len(index_doc.read_text(encoding="utf-8")), 100)
 
     def test_f3_05_gitignore_excludes_pkm_junctions(self):
         """Verify .gitignore contains entries for /My-Wiki/, /Inbox_Raw/, and /Archive_Sources/."""
@@ -217,9 +217,10 @@ class TestTier1F4AgentsConstitution(unittest.TestCase):
         self.assertIn("PKM 마스터 아키텍트", self.content, "AGENTS.md must define PKM 마스터 아키텍트 persona")
 
     def test_f4_02_dynamic_ssot_preflight_rule(self):
-        """Verify AGENTS.md mandates dynamic pre-flight read of PKM 아키텍처.md and 옵시디언 메모간 링크 연결 규칙 설계.md."""
-        self.assertIn("PKM 아키텍처.md", self.content, "AGENTS.md must reference PKM 아키텍처.md as SSOT")
-        self.assertIn("옵시디언 메모간 링크 연결 규칙 설계.md", self.content, "AGENTS.md must reference 옵시디언 링크 규칙 as SSOT")
+        """Verify AGENTS.md mandates dynamic pre-flight read of My-Wiki Rules.md and _인덱스_400_Wiki.md."""
+        self.assertIn("My-Wiki Rules.md", self.content, "AGENTS.md must reference My-Wiki Rules.md as SSOT")
+        self.assertIn("_인덱스_400_Wiki.md", self.content, "AGENTS.md must reference _인덱스_400_Wiki.md as SSOT")
+        self.assertIn("constitution_loader.py", self.content, "AGENTS.md must reference constitution_loader.py")
 
     def test_f4_03_human_write_sovereignty(self):
         """Verify AGENTS.md enforces human write sovereignty on 100. Concepts and 500. etc."""
@@ -274,8 +275,8 @@ class TestTier1F5PKMManagerSkill(unittest.TestCase):
     def test_f5_03_defines_ssot_preflight_workflow(self):
         """Verify SKILL.md defines Dynamic SSOT Pre-flight workflow."""
         content = self._require_skill_file()
-        self.assertIn("PKM 아키텍처.md", content, "SKILL.md must instruct reading PKM 아키텍처.md")
-        self.assertIn("옵시디언 메모간 링크 연결 규칙 설계.md", content)
+        self.assertIn("My-Wiki Rules.md", content, "SKILL.md must instruct reading My-Wiki Rules.md")
+        self.assertIn("constitution_loader.py", content, "SKILL.md must document constitution_loader.py")
 
     def test_f5_04_defines_kordoc_ingestion_workflow(self):
         """Verify SKILL.md defines kordoc external document ingestion workflow."""
