@@ -69,7 +69,7 @@ class TestConstitutionLoaderRobustness(unittest.TestCase):
 
     def test_03_standard_prefixes(self):
         """Verify standard filename prefixes extracted correctly."""
-        expected_prefixes = ["C#_", "C#-S#_", "산업_", "기업_", "_인덱스_"]
+        expected_prefixes = ["T#_", "T#-S#_", "M#_", "M#-S#_", "C#_", "C#-S#_", "산업_", "기업_", "도서_", "인물_", "_인덱스_"]
         self.assertEqual(self.cfg.standard_prefixes, expected_prefixes)
         self.assertEqual(self.cfg["standard_prefixes"], expected_prefixes)
 
@@ -152,7 +152,7 @@ class TestConstitutionRawTextIntegrity(unittest.TestCase):
         self.assertEqual(fm.get("domain"), ["ai-pkm"])
         self.assertEqual(fm.get("up"), ["[[06_AI 활용 및 PKM 구축]]"])
         self.assertEqual(fm.get("status"), "active")
-        self.assertEqual(str(fm.get("updated")), "2026-10-30")
+        self.assertEqual(str(fm.get("updated")), "2026-11-01")
 
     def test_07_all_markdown_tables_syntax(self):
         """Stress-test: Validate every markdown table has consistent column count across header, separator, and data rows."""
@@ -233,7 +233,7 @@ class TestConstitutionRawTextIntegrity(unittest.TestCase):
         """Verify R1.4: Flexible 1-hop and enterprise wiki (Lv4) mediation rewiring."""
         rule5_res = constitution_loader.extract_section(self.rules_text, "규칙 5")
         _, rule5_content = rule5_res
-        self.assertIn("기업 위키(Lv4) 매개 리와이어링", rule5_content)
+        self.assertIn("매개 리와이어링", rule5_content)
         self.assertIn("`A ➔ C(Lv3)` 직접 연결을 끊고", rule5_content)
         self.assertIn("`각론위키(A) ➔ 개별기업(B, Lv4) ➔ 세부산업(C, Lv3)`으로 매개(Re-wiring)", rule5_content)
         self.assertIn("`A ➔ B ➔ C`의 1-Hop 사슬", self.rules_text)

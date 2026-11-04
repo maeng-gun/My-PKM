@@ -164,6 +164,8 @@ def generate_frontmatter(
     valid_domains = [d.strip() for d in domain if d.strip()]
     if not valid_domains:
         valid_domains = ["macro"]
+    # Constitution Rule 2.4: multi-domain list must be sorted alphabetically (A-Z)
+    valid_domains = sorted(list(dict.fromkeys(valid_domains)), key=lambda s: s.lower())
     domain_lines = ["domain:"] + [f"  - {d}" for d in valid_domains]
     domain_yaml = "\n".join(domain_lines)
 

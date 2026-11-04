@@ -121,6 +121,17 @@ def rewrite_image_links(body: str, doc_stem: str) -> str:
     return body
 
 
+def strip_image_links(body: str) -> str:
+    """Strip markdown image tags and Obsidian image wikilinks from body."""
+    # 1. Remove markdown image tags: ![alt](url)
+    body = re.sub(r'!\[[^\]]*\]\([^\)]+\)\r?\n?', '', body)
+    # 2. Remove obsidian image wikilinks: ![[...]]
+    body = re.sub(r'!\[\[[^\]]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp)[^\]]*\]\]\r?\n?', '', body, flags=re.IGNORECASE)
+    # 3. Clean up excessive empty lines
+    body = re.sub(r'\n{3,}', '\n\n', body)
+    return body
+
+
 def parse_source_file(
     file_path: Path,
     table_format: str = "gfm",
@@ -276,6 +287,7 @@ def generate_frontmatter(
     summary: Optional[str] = None,
     source_url: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    vault_root: Optional[Path | str] = None,
 ) -> str:
     """Assemble 2-tier YAML frontmatter adhering to Clean Null and 7 Core Attributes."""
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -289,7 +301,8 @@ def generate_frontmatter(
         valid_domains = ["macro"]
     if not valid_domains:
         valid_domains = ["macro"]
-    valid_domains = valid_domains[:2]
+    # Constitution Rule 2.4: multi-domain list must be sorted alphabetically (A-Z)
+    valid_domains = sorted(list(dict.fromkeys(valid_domains)), key=lambda s: s.lower())[:2]
 
     domain_lines = ["domain:"] + [f"  - {d}" for d in valid_domains]
     domain_yaml = "\n".join(domain_lines)
@@ -356,7 +369,7 @@ def generate_frontmatter(
     ]
 
     # Tier 2 sparse extended attributes
-    # Author
+    # Author (Constitution Rule 7.2: only use [[인물_...]] when file exists, otherwise pure string)
     author_val = author
     if not author_val and metadata:
         author_val = metadata.get("author")
@@ -368,17 +381,24 @@ def generate_frontmatter(
         else:
             author_raw_items = []
         clean_authors: List[str] = []
+        wiki_dir = (Path(vault_root) / "400. Wiki") if vault_root else None
         for a in author_raw_items:
             clean = a.strip('"\'')
             if clean and clean not in ["[[]]", "[]"]:
-                if not clean.startswith("[["):
-                    clean = f"[[{clean}]]"
-                clean_authors.append(clean)
+                if clean.startswith("[[") and clean.endswith("]]"):
+                    clean_authors.append(clean)
+                elif wiki_dir and (wiki_dir / f"인물_{clean}.md").exists():
+                    clean_authors.append(f"[[인물_{clean}|{clean}]]")
+                elif wiki_dir and (wiki_dir / f"{clean}.md").exists():
+                    clean_authors.append(f"[[{clean}]]")
+                else:
+                    # Pure string without wikilinks to prevent ghost nodes
+                    clean_authors.append(clean)
         if clean_authors:
             formatted_authors = ", ".join(f'"{a}"' for a in clean_authors)
             lines.append(f"author: [{formatted_authors}]")
 
-    # Organization
+    # Organization (only use wikilink if target exists or already wikilink, otherwise pure string)
     org_val = org
     if not org_val and metadata:
         org_val = metadata.get("org")
@@ -390,12 +410,16 @@ def generate_frontmatter(
         else:
             org_raw_items = []
         clean_orgs: List[str] = []
+        wiki_dir = (Path(vault_root) / "400. Wiki") if vault_root else None
         for o in org_raw_items:
             clean = o.strip('"\'')
             if clean and clean not in ["[[]]", "[]"]:
-                if not clean.startswith("[["):
-                    clean = f"[[{clean}]]"
-                clean_orgs.append(clean)
+                if clean.startswith("[[") and clean.endswith("]]"):
+                    clean_orgs.append(clean)
+                elif wiki_dir and (wiki_dir / f"{clean}.md").exists():
+                    clean_orgs.append(f"[[{clean}]]")
+                else:
+                    clean_orgs.append(clean)
         if clean_orgs:
             formatted_orgs = ", ".join(f'"{o}"' for o in clean_orgs)
             lines.append(f"org: [{formatted_orgs}]")
@@ -651,8 +675,12 @@ def process_file(
     explicit_source_url = getattr(args, "source_url", None)
     gdrive_url = explicit_source_url or resolve_gdrive_url(file_path, wait_for_sync=False)
 
-    # 3. Rewrite markdown image links
-    rewritten_body = rewrite_image_links(body_text, file_path.stem)
+    # 3. Rewrite or strip image links based on --extract-images
+    should_extract_images = getattr(args, "extract_images", False) and not getattr(args, "no_images", False)
+    if should_extract_images:
+        rewritten_body = rewrite_image_links(body_text, file_path.stem)
+    else:
+        rewritten_body = strip_image_links(body_text)
 
     domain_list = [d.strip() for d in args.domain.split(",") if d.strip()]
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -681,10 +709,11 @@ def process_file(
             summary=args.summary,
             source_url=dry_source_url,
             metadata=meta,
+            vault_root=vault_path,
         )
         print(f"[DRY-RUN] Would generate note: {target_note_file}")
         print(f"[DRY-RUN] Frontmatter preview:\n{frontmatter}")
-        if raw_images:
+        if raw_images and should_extract_images:
             print(f"[DRY-RUN] Would extract {len(raw_images)} images to: {target_image_dir}")
         print(f"[DRY-RUN] Would archive source: {file_path} -> {target_archive_file}")
         return True
@@ -694,8 +723,8 @@ def process_file(
         if args.verbose:
             print(f"[Warning] Note already exists at {target_note_file}. Overwriting with updated parse.")
 
-    # 6. Extract and write images (only create image folder if images exist)
-    if raw_images:
+    # 6. Extract and write images (only create image folder if images exist and extraction enabled)
+    if raw_images and should_extract_images:
         target_image_dir.mkdir(parents=True, exist_ok=True)
         for idx, img in enumerate(raw_images, start=1):
             if isinstance(img, tuple) and len(img) == 2:
@@ -752,6 +781,7 @@ def process_file(
         summary=args.summary,
         source_url=final_source_url,
         metadata=meta,
+        vault_root=vault_path,
     )
     full_markdown = assemble_markdown_document(frontmatter, rewritten_body, file_path.stem)
 
@@ -856,6 +886,18 @@ def main() -> int:
         type=str,
         default=None,
         help="Explicit source_url override (defaults to auto-resolved Google Drive URL: https://drive.google.com/open?id=<ID>&usp=drive_fs)",
+    )
+    parser.add_argument(
+        "--extract-images",
+        action="store_true",
+        default=False,
+        help="Extract embedded images to 900. config/910. Attached/<doc_stem>",
+    )
+    parser.add_argument(
+        "--no-images",
+        action="store_true",
+        default=False,
+        help="Disable image extraction (default)",
     )
     parser.add_argument(
         "--table-format",

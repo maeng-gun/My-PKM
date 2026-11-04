@@ -8,6 +8,7 @@ missing file error handling, and batch inbox processing.
 
 from datetime import datetime
 import json
+import re
 import os
 from pathlib import Path
 import shutil
@@ -252,7 +253,7 @@ class TestParseSourcesUnit(unittest.TestCase):
             # 7 Core Attributes
             self.assertEqual(fm.get("origin"), "source", "Core attribute 'origin' must be 'source'")
             self.assertEqual(fm.get("type"), "source", "Core attribute 'type' must be 'source'")
-            self.assertEqual(fm.get("domain"), ["macro", "equity"], "Core attribute 'domain' must match")
+            self.assertEqual(fm.get("domain"), ["equity", "macro"], "Core attribute 'domain' must match (alphabetically sorted, Rule 2.4)")
             self.assertEqual(fm.get("up"), ["[[02_매크로 분석]]"], "Core attribute 'up' must match")
             self.assertEqual(fm.get("status"), "active", "Core attribute 'status' must be 'active'")
             self.assertIn("created", fm, "Core attribute 'created' must be present")
@@ -379,6 +380,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--archive", str(archive),
                     "--subfolder", "310. Reports_Papers",
                     "--domain", "macro",
+                    "--extract-images",
                 ],
                 capture_output=True,
                 text=True,
@@ -411,6 +413,54 @@ class TestParseSourcesUnit(unittest.TestCase):
             # Assert raw PDF was archived and inbox zero reached
             self.assertFalse(sample_file.exists(), "Source PDF must be removed from Inbox_Raw")
             self.assertTrue((archive / "310. Reports_Papers" / f"{sample_stem}.pdf").exists())
+
+    def test_default_no_image_extraction(self):
+        """Verify that by default image extraction is disabled, no Attached directory is created, and image embeds are stripped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            inbox.mkdir(parents=True)
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+
+            sample_stem = "default_no_image_test"
+            sample_file = inbox / f"{sample_stem}.pdf"
+
+            if REFERENCE_PDF.exists():
+                shutil.copy2(str(REFERENCE_PDF), str(sample_file))
+            else:
+                sample_file.write_bytes(b"%PDF-1.4 dummy content")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--file", str(sample_file),
+                    "--inbox", str(inbox),
+                    "--vault", str(vault),
+                    "--archive", str(archive),
+                    "--subfolder", "310. Reports_Papers",
+                    "--domain", "macro",
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, f"Command failed: {res.stderr}\nOutput: {res.stdout}")
+
+            out_note = vault / "000. Inbox" / f"{sample_stem}.md"
+            self.assertTrue(out_note.exists())
+            note_content = out_note.read_text(encoding="utf-8")
+
+            # Check that Attached/<doc_stem> is NOT created
+            attached_dir = vault / "900. config" / "910. Attached" / sample_stem
+            self.assertFalse(attached_dir.exists(), f"Attached directory must NOT exist by default: {attached_dir}")
+
+            # Verify no local image wikilinks in markdown body
+            self.assertNotIn("image_001.png", note_content)
+            self.assertFalse(re.search(r"!\[\[.*?\.png\]\]", note_content))
 
     def test_dry_run_leaves_directories_and_files_untouched(self):
         """9. Verify --dry-run previews conversion without mutating disk or moving inbox files."""

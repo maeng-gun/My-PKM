@@ -181,7 +181,7 @@ class TestIngestSourcesUnit(unittest.TestCase):
 
             self.assertEqual(fm_data["origin"], "source")
             self.assertEqual(fm_data["type"], "source")
-            self.assertEqual(fm_data["domain"], ["macro", "equity"])
+            self.assertEqual(fm_data["domain"], ["equity", "macro"])  # Rule 2.4: alphabetical (A-Z)
             self.assertEqual(fm_data["up"], ["[[02_매크로 분석]]"])
             self.assertEqual(fm_data["status"], "active")
             self.assertIn("created", fm_data)

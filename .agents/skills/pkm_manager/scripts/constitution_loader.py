@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""Dynamic SSOT Constitution Loader for My-PKM (My-Wiki Rules.md v3.0+).
+"""Dynamic SSOT Constitution Loader for My-PKM (My-Wiki Rules.md v3.5+).
 
 Parses `./My-Wiki/My-Wiki Rules.md` at runtime so that any updates made manually
 or via the Gemini App (Spark) to folder structures, domain codes, core attributes,
 status/type enums, or `500. Index` partitioned indexes are immediately reflected
 across Antigravity (`agy`) skills and Python CLI tools.
 
-Provides safe v3.0 fallback defaults when invoked on minimal test fixtures that
+Provides safe v3.5 fallback defaults when invoked on minimal test fixtures that
 do not contain a `My-Wiki Rules.md` file.
 
 Usage:
@@ -47,9 +47,7 @@ DEFAULT_STANDARD_DOMAINS: List[str] = [
     "macro",
     "equity",
     "portfolio",
-    "quant",
     "work",
-    "life",
     "ai-pkm",
     "education",
 ]
@@ -126,10 +124,16 @@ DEFAULT_INDEX_FILES: List[str] = [
 ]
 
 DEFAULT_STANDARD_PREFIXES: List[str] = [
+    "T#_",
+    "T#-S#_",
+    "M#_",
+    "M#-S#_",
     "C#_",
     "C#-S#_",
     "산업_",
     "기업_",
+    "도서_",
+    "인물_",
     "_인덱스_",
 ]
 
@@ -140,7 +144,7 @@ class ConstitutionConfig:
 
     ssot_path: Optional[str] = None
     ssot_exists: bool = False
-    version: str = "v3.0"
+    version: str = "v3.5"
     updated: str = ""
     sha256: str = ""
     core_attributes: List[str] = field(default_factory=lambda: list(DEFAULT_CORE_ATTRIBUTES))
@@ -371,10 +375,11 @@ PREDEFINED_SECTIONS: Dict[str, Tuple[str, str]] = {
     "links": ("### [Part 2.", "링크 방향성(O / B / C)과 단계적 추상화 위계 설계 (규칙 4~8)"),
     "compile": ("##### 9.1", "1차 프로세스: 000. Inbox 기점 4단계 원천 메모 컴파일 (Step 1~4)"),
     "mstep": ("##### 9.2", "2차 프로세스: 상위 추상 위키 상향 메타 컴파일 (M-Step 1~5)"),
-    "astep": ("##### 9.3", "3차 프로세스: 헌법 전 조항 통합 사후 감사 프로토콜 (A-Step 1~5)"),
+    "rstep": ("##### 9.3", "3차 프로세스: 전 계층 수평 통폐합·상향 추상화·수평 분할 상시 리팩토링 프로토콜 (R-Step 1~5)"),
+    "astep": ("##### 9.4", "4차 프로세스: 헌법 전 조항 통합 사후 감사 프로토콜 (A-Step 1~5)"),
     "index": ("#### 규칙 10.", "500. Index 분할 인덱스 아키텍처"),
     "templates": ("#### 규칙 11.", "주제 성격에 따른 400. Wiki 적응형 내부 컴파일 구조 (5대 위키 아키타입)"),
-    "cases": ("## <5>", "복합 지식 아키텍처 실전 적용 규격 (Case 1~3)"),
+    "cases": ("## <5>", "복합 지식 아키텍처 실전 적용 규격 (Case 1~4: 독서, 뉴스, 산업/기업, 이론/매크로)"),
     "all": ("", "전체 헌법 원문"),
 }
 

@@ -29,6 +29,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Valley AI News Scraper (Headless)")
     parser.add_argument("--start", required=True, help="Start date in YYYY-MM-DD format")
     parser.add_argument("--end", required=True, help="End date in YYYY-MM-DD format")
+    parser.add_argument(
+        "--output-dir", "-o",
+        default=os.path.join("My-Wiki", "000. Inbox"),
+        help="Output directory for markdown files (default: My-Wiki/000. Inbox)"
+    )
     return parser.parse_args()
 
 def get_authenticated_context(p):
@@ -80,9 +85,11 @@ def get_authenticated_context(p):
 
 def parse_date_from_text(text):
     """
-    '2026. 09. 15' 또는 '2026-09-15' 형태의 날짜 추출
+    '2026. 09. 15', '2026-09-15' 또는 '2026년 09월 15일' 형태의 날짜 추출
     """
-    match = re.search(r'(\d{4})[.\-\s]+(\d{1,2})[.\-\s]+(\d{1,2})', text)
+    if not text:
+        return None
+    match = re.search(r'(\d{4})[.\-\s년]+(\d{1,2})[.\-\s월]+(\d{1,2})', text)
     if match:
         year, month, day = match.groups()
         try:
@@ -150,9 +157,9 @@ ARTICLE_TO_MD_JS = """() => {
                 return del ? ` ~~${del}~~ ` : '';
             }
             case 'code':
-                return ` \`${children.trim()}\` `;
+                return ' `' + children.trim() + '` ';
             case 'pre':
-                return `\\n\\n\`\`\`\\n${node.textContent.trim()}\\n\`\`\`\\n\\n`;
+                return '\\n\\n```\\n' + node.textContent.trim() + '\\n```\\n\\n';
             case 'blockquote': {
                 const bq = children.trim().split('\\n').map(l => `> ${l}`).join('\\n');
                 return `\\n\\n${bq}\\n\\n`;
@@ -203,9 +210,9 @@ ARTICLE_TO_MD_JS = """() => {
     return md;
 }"""
 
-def scrape_board(context, category_url, start_date, end_date, category_name, suffix):
+def scrape_board(context, category_url, start_date, end_date, title_prefix, output_dir):
     page = context.new_page()
-    print(f"\n[{category_name}] 접속 중: {category_url}")
+    print(f"\n[{title_prefix}] 접속 중: {category_url}")
     page.goto(category_url, wait_until="domcontentloaded", timeout=25000)
     page.wait_for_timeout(3000)
     
@@ -213,7 +220,7 @@ def scrape_board(context, category_url, start_date, end_date, category_name, suf
     card_selector = f'a[href^="{base_path}/"]'
 
     # 기간 내 모든 글을 로드하기 위한 페이지네이션 순회
-    print(f"[{category_name}] 목록 탐색 및 페이지 순회 진행 중...")
+    print(f"[{title_prefix}] 목록 탐색 및 페이지 순회 진행 중...")
     posts_to_scrape = []
     seen_urls = set()
     current_page = 1
@@ -221,7 +228,7 @@ def scrape_board(context, category_url, start_date, end_date, category_name, suf
 
     while current_page <= max_pages:
         cards = page.locator(card_selector).all()
-        print(f"[{category_name}] {current_page}페이지: {len(cards)}개 게시물 카드 발견.")
+        print(f"[{title_prefix}] {current_page}페이지: {len(cards)}개 게시물 카드 발견.")
         
         page_dates = []
         for card in cards:
@@ -232,7 +239,11 @@ def scrape_board(context, category_url, start_date, end_date, category_name, suf
             
             full_url = f"https://www.valley.town{href}"
             card_text = card.inner_text()
-            post_date = parse_date_from_text(card_text)
+            date_span = card.locator("span.typo-default-2xs-500").first
+            if date_span.count() > 0:
+                post_date = parse_date_from_text(date_span.inner_text())
+            else:
+                post_date = parse_date_from_text(card_text)
             if post_date:
                 page_dates.append(post_date)
             
@@ -306,8 +317,12 @@ def scrape_board(context, category_url, start_date, end_date, category_name, suf
                 p_page.close()
                 continue
                 
-            raw_body = p_page.evaluate("() => document.body.innerText")
-            exact_date = parse_date_from_text(raw_body) or item["date"] or datetime.date.today()
+            exact_date = item.get("date")
+            if not exact_date:
+                meta_el = p_page.locator("div.typo-default-2xs-400").first
+                if meta_el.count() > 0:
+                    exact_date = parse_date_from_text(meta_el.inner_text())
+            exact_date = exact_date or datetime.date.today()
             
             if start_date <= exact_date <= end_date:
                 date_str = exact_date.strftime("%Y-%m-%d")
@@ -324,15 +339,15 @@ def scrape_board(context, category_url, start_date, end_date, category_name, suf
             if p_page and not p_page.is_closed():
                 p_page.close()
 
-    # input_staging/ 폴더에 날짜별 & 게시판별로 분리하여 마크다운 파일 저장
-    os.makedirs("input_staging", exist_ok=True)
+    # 대상 폴더에 날짜별 & 게시판별로 분리하여 마크다운 파일 저장 (프론트매터 없이 H1 헤더로 시작)
+    os.makedirs(output_dir, exist_ok=True)
     for d_str in sorted(scraped_by_date.keys()):
         entries = scraped_by_date[d_str]
-        out_file = f"input_staging/{d_str}_{suffix}.md"
+        out_file = os.path.join(output_dir, f"{title_prefix}_{d_str}.md")
         with open(out_file, "w", encoding="utf-8") as f:
-            f.write(f"# {category_name} ({d_str})\n\n")
+            f.write(f"# {title_prefix} ({d_str})\n\n")
             f.write("\n".join(entries))
-        print(f"[{category_name}] 파일 저장 완료: {out_file} ({len(entries)}개 게시물)")
+        print(f"[{title_prefix}] 파일 저장 완료: {out_file} ({len(entries)}개 게시물)")
         
     page.close()
     return total_count
@@ -341,23 +356,26 @@ def main():
     args = parse_args()
     start_date = datetime.datetime.strptime(args.start, "%Y-%m-%d").date()
     end_date = datetime.datetime.strptime(args.end, "%Y-%m-%d").date()
+    output_dir = args.output_dir
     
     print("=" * 60)
     print(f"Valley AI 매크로 뉴스 백그라운드 수집 시작")
     print(f"수집 대상 기간: {start_date} ~ {end_date}")
+    print(f"저장 위치: {output_dir}")
     print("=" * 60)
     
     with sync_playwright() as p:
         browser, context = get_authenticated_context(p)
         
-        wsj_count = scrape_board(context, WSJ_URL, start_date, end_date, "월가 소식", "wsj")
-        insight_count = scrape_board(context, INSIGHT_URL, start_date, end_date, "오늘의 인사이트", "insight")
+        wsj_count = scrape_board(context, WSJ_URL, start_date, end_date, "밸리AI 월가소식 리포트", output_dir)
+        insight_count = scrape_board(context, INSIGHT_URL, start_date, end_date, "밸리AI 오늘의 인사이트", output_dir)
         
         browser.close()
         
     print("\n" + "=" * 60)
     print(f"[수집 완료 보고]")
     print(f"- 대상 기간: {start_date} ~ {end_date}")
+    print(f"- 저장 위치: {output_dir}")
     print(f"- 월가 소식: {wsj_count}건")
     print(f"- 오늘의 인사이트: {insight_count}건")
     print("=" * 60)

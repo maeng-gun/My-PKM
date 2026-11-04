@@ -230,7 +230,7 @@ class TestTier5AdversarialGhostLinkCleanNull(unittest.TestCase):
             fm = yaml.safe_load(parts[1])
 
             self.assertEqual(len(fm["domain"]), 2, f"Domain list must be capped at 2: {fm['domain']}")
-            self.assertEqual(fm["domain"], ["macro", "equity"])
+            self.assertEqual(fm["domain"], ["equity", "macro"])
 
 
 class TestTier5AdversarialFilenamesAndPaths(unittest.TestCase):

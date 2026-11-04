@@ -75,7 +75,7 @@ class TestConstitutionLoaderSSOT(unittest.TestCase):
 
     def test_03_standard_prefixes(self):
         """Verify standard_prefixes contains ['C#_', 'C#-S#_', '산업_', '기업_', '_인덱스_']."""
-        expected = ["C#_", "C#-S#_", "산업_", "기업_", "_인덱스_"]
+        expected = ["T#_", "T#-S#_", "M#_", "M#-S#_", "C#_", "C#-S#_", "산업_", "기업_", "도서_", "인물_", "_인덱스_"]
         self.assertEqual(self.cfg.standard_prefixes, expected)
         self.assertEqual(self.cfg["standard_prefixes"], expected)
         self.assertEqual(self.cfg["prefixes"], expected)
@@ -188,7 +188,7 @@ class TestMyWikiRulesRawTextInspection(unittest.TestCase):
         self.assertEqual(fm.get("type"), "hub")
         self.assertEqual(fm.get("domain"), ["ai-pkm"])
         self.assertEqual(fm.get("status"), "active")
-        self.assertEqual(str(fm.get("updated")), "2026-10-30")
+        self.assertEqual(str(fm.get("updated")), "2026-11-01")
         self.assertEqual(fm.get("level"), 1)
         self.assertIsInstance(fm.get("aliases"), list)
 
@@ -262,7 +262,7 @@ class TestMyWikiRulesRawTextInspection(unittest.TestCase):
     def test_15_r1_req4_flexible_1hop_and_lv4_mediation_rewiring(self):
         """R1.4: Verify flexible 1-hop up and Lv4 enterprise mediation rewiring."""
         # Rule 5.2
-        self.assertIn("다대다(`N:M`) 진화에 따른 동적 이행적 축소 및 기업 위키(Lv4) 매개 리와이어링", self.text)
+        self.assertIn("다대다(`N:M`) 진화에 따른 동적 이행적 축소 및 중간 계층(기업 Lv4 / 추상 Lv3) 매개 리와이어링", self.text)
         self.assertIn("각론위키(A) ➔ 개별기업(B, Lv4) ➔ 세부산업(C, Lv3)", self.text)
         # Section 5.3 Case 3
         self.assertIn("모래시계형 `N to 1 to N` 수렴 후 발산 및 Lv4 매개 리와이어링 구조", self.text)

@@ -1,6 +1,6 @@
 ---
 name: pkm-manager
-description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.md 동적 헌법 준수, 000. Inbox 위키 컴파일 및 역추적 재컴파일, 상향 메타 컴파일, 500. Index 분할 인덱스 관리 및 vault_linter 무결성 감사"
+description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.md 동적 헌법 v3.5 준수, 000. Inbox 위키 컴파일(70% 흡수 게이트) 및 역추적 재컴파일, 상향 메타 컴파일, R-Step 상시 리팩토링, 500. Index 분할 인덱스 관리 및 vault_linter 무결성 감사"
 ---
 
 # PKM Master Architect Skill (`pkm_manager`)
@@ -9,9 +9,9 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 > [!IMPORTANT]
 > **엔진(Skill)과 헌법(`My-Wiki Rules.md`)의 완전 분리 원칙 (Pure Dynamic Pointer Architecture)**
-> - `My-Wiki/My-Wiki Rules.md`는 제미나이 앱(Spark)과 수기 작업을 통해 수시로 진화하는 **유일한 단일 마스터 헌법(Single Source of Truth)**입니다.
+> - `My-Wiki/My-Wiki Rules.md`는 제미나이 앱(Spark)과 수기 작업을 통해 수시로 진화하는 **유일한 단일 마스터 헌법(Single Source of Truth, v3.5)**입니다.
 > - 본 스킬 파일(`SKILL.md`)과 Python CLI 도구(`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`)는 변하지 않는 **Antigravity(`agy`) 전용 실행 엔진** 역할을 수행합니다.
-> - **순수 동적 포인터 원칙**: 모든 볼트 규칙·스키마·컴파일 단계(`Step`/`M-Step`/`A-Step`)·위키 아키타입 및 템플릿은 `./My-Wiki/My-Wiki Rules.md`를 유일한 동적 SSOT로 삼으며, 작업 전 반드시 `constitution_loader.py --vault ./My-Wiki` 및 `--section`으로 최신 헌법 조항을 런타임 조회하여 그대로 집행합니다.
+> - **순수 동적 포인터 원칙**: 모든 볼트 규칙·스키마·4계층 컴파일 단계(`Step`/`M-Step`/`R-Step`/`A-Step`)·위키 아키타입 및 템플릿은 `./My-Wiki/My-Wiki Rules.md`를 유일한 동적 SSOT로 삼으며, 작업 전 반드시 `constitution_loader.py --vault ./My-Wiki` 및 `--section`으로 최신 헌법 조항을 런타임 조회하여 그대로 집행합니다.
 > - 따라서 `My-Wiki Rules.md`가 향후 버전으로 개정되더라도 본 스킬 문서를 다시 수정할 필요가 없습니다.
 
 ---
@@ -30,7 +30,7 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ---
 
-## 2. 5대 핵심 워크플로우 (Workflows 1 ~ 5)
+## 2. 6대 핵심 워크플로우 (Workflows 1 ~ 6)
 
 ### Workflow 1: 실시간 SSOT 동적 사전 검증 (Dynamic SSOT Pre-flight)
 
@@ -57,12 +57,12 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ---
 
-### Workflow 2: 1차 인박스 컴파일 및 역추적 파이프라인 (Inbox Compile Pipeline)
+### Workflow 2: 1차 인박스 컴파일 및 70% 흡수 게이트 파이프라인 (Inbox Compile Pipeline)
 
-`000. Inbox`에 존재하는 모든 메모는 **'아직 위키 컴파일 및 인덱싱을 거치지 않은 대기 상태'**를 의미합니다. 사용자의 *"인박스 컴파일해 줘"* 명령 시(또는 `pkm_parse` 파싱 직후 원스톱 컴파일 요청 시) `constitution_loader.py --vault ./My-Wiki --section compile`을 실행하여 확인한 최신 헌법 컴파일 파이프라인 조항을 순서대로 실행합니다:
+`000. Inbox`에 존재하는 모든 메모는 **'아직 위키 컴파일 및 인덱싱을 거치지 않은 대기 상태'**를 의미합니다. 사용자의 *"인박스 컴파일해 줘"* 명령 시(또는 `pkm_parse` 파싱 직후 원스톱 컴파일 요청 시) `constitution_loader.py --vault ./My-Wiki --section compile`을 실행하여 확인한 최신 헌법 9.1절 컴파일 파이프라인 조항을 순서대로 실행합니다:
 
 ```bash
-# 최신 컴파일 파이프라인 조항 런타임 조회
+# 최신 1차 컴파일 파이프라인 조항 런타임 조회
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section compile
 ```
 
@@ -75,28 +75,30 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 - `constitution_loader.py --vault ./My-Wiki --section schema`로 조회한 최신 스키마 규격에 따라 대상 메모에 맞는 프론트매터를 부여합니다.
 - 구 레거시 속성이 남아 있는 메모는 `compile_helper.py normalize-fm`을 통해 깔끔히 제거하고 헌법 필수 코어/확장 속성으로 정규화합니다.
 - 하나의 메모가 복수의 위키 주제를 다룰 경우 `up`에 복수의 위키링크를 지정하며(다대다 `N:M` 허용), 연결할 대상이 없을 때는 절대로 `"[[]]"`(빈 대괄호 텍스트)로 남겨두지 않고, 반드시 `[]`(YAML 빈 리스트)로 표기합니다.
+- `domain` 항목이 2개 이상이면 헌법 규칙 2.4에 따라 반드시 알파벳 오름차순(A-Z)으로 정렬합니다 (`compile_helper.py`·`parse_sources.py`·`ingest_sources.py`는 입력 순서와 무관하게 자동 정렬하며, `vault_linter.py --check-astep`이 위반을 감지하고 `--fix`가 자동 교정합니다).
 
 ```bash
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki normalize-fm \
   --file "000. Inbox/대상메모.md" \
   --origin "human" \
   --type "analysis" \
-  --domain "macro,equity" \
+  --domain "equity,macro" \
   --up "[[글로벌 매크로 동향]],[[AI CAPEX 거품론과 코스피 급락·외국인 투매]]" \
   --status "active" \
   --ref-date "2026-09-12" \
   --summary "핵심 1줄 요약"
 ```
 
-#### Step 2 — 1차 위키 컴파일 (`000. Inbox` 상태에서 수행)
-1. **기존 위키 매칭 스캔**:
-   - `500. Index/_인덱스_400_Wiki.md`를 스캔하여 대상 메모와 연결될 기존 각론/상위 위키(1개 또는 복수)를 탐색합니다:
+#### Step 2 — 1차 위키 컴파일 및 '70% 중첩 흡수 게이트 (Merge-on-Write)'
+1. **기존 위키 매칭 및 70% 중첩 스캔**:
+   - `500. Index/_인덱스_400_Wiki.md`의 해당 `Lv2`(`T#-S#`, `M#-S#`, `C#-S#`) 하위 목록을 스캔합니다:
      ```bash
      .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki scan-index \
        --scope wiki --query "핵심키워드1,핵심키워드2"
      ```
+   - **70% 중첩 흡수 게이트 (Merge-on-Write)**: 기존 `Lv4` 각론/사건 위키와 핵심 주제·메커니즘이 70% 이상 겹치거나 동일 쟁점의 연장선이라면 신규 위키 생성을 엄격히 차단하고, 기존 `Lv4` 위키의 제목·범위를 포괄적으로 확장하여 흡수합니다.
 2. **`400. Wiki` 증분 반영 또는 신규 위키 생성**:
-   - 컴파일 전 반드시 `constitution_loader.py --vault ./My-Wiki --section templates`를 실행하여 헌법이 규정하는 최신 위키 아키타입 내부 구조를 확인합니다.
+   - 컴파일 전 반드시 `constitution_loader.py --vault ./My-Wiki --section templates`를 실행하여 헌법이 규정하는 최신 위키 아키타입(유형 A~E) 내부 구조를 확인합니다.
    - **기존 위키 존재 시**: 해당 위키 노트를 열어 헌법 표준 섹션 구조에 맞춰 핵심 논거(`200·300`) 또는 나의 관점(`100`)과 `[[메모명]]` 인라인 링크를 증분 반영하고, 위키의 `updated` 날짜와 `_인덱스_400_Wiki.md`의 최종 컴파일일을 갱신합니다.
    - **신규 핵심 주제일 경우**: `400. Wiki`에 새로운 위키를 생성하고, `500. Index/_인덱스_400_Wiki.md`의 계층 트리 및 레지스트리 테이블에 즉시 등재합니다.
    - **즉시 상향 동기화**: 신규 하위 위키가 생성되어 기존 상위 추상 위키를 `up`으로 가리키거나 핵심 테제가 반전된 경우, 연결된 상위 추상 위키의 구조 맵에도 즉시 링크와 요약을 추가합니다.
@@ -139,9 +141,9 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ---
 
-### Workflow 3: 2차 상향 메타 컴파일 및 다대다(`N:M`) 동기화 (Meta Compilation)
+### Workflow 3: 2차 상향 메타 컴파일 및 다대다(`N:M`) 동기화 (M-Step 1~5)
 
-구체적인 각론/개체 위키들 위에 추상도를 높인 상위 추상(총론) 위키를 구축하고 유지보수할 때는 `constitution_loader.py --vault ./My-Wiki --section mstep`을 실행하여 확인한 최신 메타 컴파일 조항을 준수합니다:
+구체적인 각론/개체 위키들 위에 추상도를 높인 상위 추상(총론) 위키를 구축하고 유지보수할 때는 `constitution_loader.py --vault ./My-Wiki --section mstep`을 실행하여 확인한 최신 헌법 9.2절 메타 컴파일 조항을 준수합니다:
 
 ```bash
 # 최신 상향 메타 컴파일(M-Step) 규격 런타임 조회
@@ -160,38 +162,60 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ---
 
-### Workflow 4: 도메인별 복합 지식 구조화 규격 (Domain-Specific Structural Patterns)
+### Workflow 4: 3차 전 계층(`Lv1~Lv4`) 수평 통폐합·추상화·분할 상시 리팩토링 (R-Step 1~5)
 
-독서모임, 뉴스 큐레이팅, 산업·기업 분류 체계 등 복합 지식 구조화는 세부 조항을 하드코딩하지 않고, 항상 `constitution_loader.py --vault ./My-Wiki --section cases`를 실행하여 헌법 원문의 최신 규격을 런타임 조회하여 수행합니다:
+조간신문 사건 위키와 외부 리포트 파생 각론 위키들의 난립을 상시 억제하고 분류 체계를 유지하기 위해, `constitution_loader.py --vault ./My-Wiki --section rstep`을 실행하여 확인한 최신 헌법 9.3절 5단계 무결성 리팩토링 프로토콜(`R-Step 1~5`)을 상시 가동합니다:
+
+```bash
+# 최신 3차 리팩토링 프로토콜(R-Step) 조항 런타임 조회
+.\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section rstep
+```
+
+1. **2-Track 트리거 거버넌스**:
+   - **Track 1 (컴파일 시점 자동 감지)**: 컴파일 대상 상위 기둥 아래에 **유사 `Lv4` 중복(2개+)**이 감지되면 **AI가 즉시 자율적으로 `Lv4` 수평 통폐합(`R-Step 1~5`)을 수행한 뒤 사후 보고**하며, **`Lv1~Lv3` 구조 개편(Lv3 Roll-up 신설, Lv1~Lv3 수평 분할 및 미사용 기둥 폐쇄)** 임계치 도달 시에는 **희명님께 사전 제안·승인 후 실행**합니다.
+   - **Track 2 (사용자 수시 명령)**: 사용자의 *"위키 통폐합/정리해 줘"* 지시 시 `_인덱스_400_Wiki.md` 트리를 스캔하여 통폐합·추상화·분할을 일괄 집행합니다.
+2. **5단계 실행 절차**:
+   - **R-Step 1**: 타깃 선정 및 본문 무손실 통합/분할 (`aliases`에 구 위키 명칭 필수 등록)
+   - **R-Step 2**: `500. Index` 기반 하위 원천 메모 및 인접 위키의 `up`·인라인 링크 일괄 역추적 치환 (Re-wiring)
+   - **R-Step 3**: 통폐합·분할로 소멸한 구 위키 파일을 구글 드라이브 루트 직속 `.trash`로 격리 이동 (`_merged_YYYYMMDD.md`)
+   - **R-Step 4**: `500. Index` 마스터 트리(`_인덱스_400_Wiki.md`) 및 분할 원천 인덱스 레지스트리 동기화
+   - **R-Step 5**: 사후 감사(`A-Step 1~5`) 실행 ➔ Dead Link 및 유령 노드 0건 검증
+
+---
+
+### Workflow 5: 도메인별 복합 지식 구조화 규격 (Domain-Specific Structural Patterns)
+
+독서모임, 뉴스 큐레이팅, 산업·기업 분류 체계, 이론·매크로 분류 체계 등 복합 지식 구조화는 세부 조항을 하드코딩하지 않고, 항상 `constitution_loader.py --vault ./My-Wiki --section cases`를 실행하여 헌법 원문의 최신 규격을 런타임 조회하여 수행합니다:
 
 ```bash
 # 도메인별 복합 지식 구조화 실전 규격 런타임 조회
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section cases
 ```
 
-- **독서모임 & 투자 리서치 직교 구조화**: 헌법 Case 1에 정의된 주체별 분리, 수직 `up` 및 수평 시계열 사다리(`source` ➔ `prev`), 엔티티 분리 규격 준수.
-- **조간신문 큐레이팅 리포트 사건 트래킹**: 헌법 Case 2에 정의된 일별 리포트 전용 인덱스 단일 귀속 및 섹션별 1-Hop 사건 태깅, 경량 타임라인 규격 준수.
-- **산업·기업 다계층 위키 체계 및 N:1:N 매핑**: 헌법 Case 3에 정의된 계층별 표준 파일명 접두사, 수직 1-Hop 연결 및 개별 기업 위키의 다중 세부산업 매핑(`1:N`), 각론 ➔ 기업 ➔ 산업 모래시계 수렴·발산 컴파일 규격 준수.
+- **Case 1 (독서 및 독서모임 5차원 직교 구조화)**: 헌법 5.1절에 정의된 모임 마스터 허브(`[[밸리AI 독서모임]]`), 2계층 도서 위키(`독서_요약_...` + `[[도서_책제목(저자)]]`), 산출물 4종 물리적 폴더 분리 및 수평 시계열 사다리(`source` ➔ `prev`), 파생 각론 위키와의 삼각형 중복 차단(`related`로 분리), 엔티티 분리 규격 준수.
+- **Case 2 (조간신문 큐레이팅 리포트 사건 트래킹)**: 헌법 5.2절에 정의된 일별 리포트 전용 인덱스 단일 귀속, 섹션별 1-Hop 사건 태깅, 사건 위키(`400. Wiki/[[표준 사건/이슈명]].md`)의 **보도일자 역순(최신이 맨 위) 타임라인** 컴파일 규격 준수.
+- **Case 3 (산업·기업 234개 위키 체계 및 N:1:N 모래시계 컴파일)**: 헌법 5.3절에 정의된 8대 밸류체인(Lv1) ➔ 33개 단계(Lv2) ➔ 193개 세부산업(Lv3) ➔ 개별 기업(Lv4: `기업_기업명(티커명)`) 계층 규격 및 `N to 1 to N` 수렴·발산 컴파일, 이행적 축소 규격 준수.
+- **Case 4 (이론·매크로 11대 Lv1 · 32개 Lv2 탑다운 골격 및 동적 컴파일)**: 헌법 5.4절에 정의된 5대 이론 클러스터(`T1~T5`) 및 15개 중분류(`T1-S1 ~ T5-S3`), 6대 매크로 클러스터(`M1~M6`) 및 17개 중분류(`M1-S1 ~ M6-S3`) 표준 골격, **미사용 상위 기둥의 지연 실체화(Lazy Instantiation: 하위 위키 1개 이상 매핑 시 마크다운 파일 생성)**, 11대 표준 접두사(`T#_`, `T#-S#_`, `M#_`, `M#-S#_`, `C#_`, `C#-S#_`, `산업_`, `기업_`, `도서_`, `인물_`, `_인덱스_`) 준수.
 
 ---
 
-### Workflow 5: 외부 원천자료 파싱(`pkm_parse`) 연계 및 볼트 무결성 감사 (`vault_linter.py`)
+### Workflow 6: 외부 원천자료 파싱(`pkm_parse`) 연계 및 볼트 헌법 사후 감사 (`vault_linter.py`)
 
 #### 1. 외부 원천자료 파싱(`pkm_parse`)과의 투트랙(Two-Track) 연계
-- `Inbox_Raw/`에 반입된 PDF, HWPX, HWP, XLSX, DOCX, PPTX 문서는 전용 파싱 스킬인 **`pkm_parse` (`.agents/skills/pkm_parse/scripts/parse_sources.py`)**를 호출하여 `900. config/910. Attached/<doc_stem>/` 이미지 추출 및 `DriveFS` 기반 `source_url` 부여 후 `000. Inbox/`에 플랫 적재합니다.
+- `Inbox_Raw/`에 반입된 PDF, HWPX, HWP, XLSX, DOCX, PPTX 문서는 전용 파싱 스킬인 **`pkm_parse` (`.agents/skills/pkm_parse/scripts/parse_sources.py`)**를 호출하여 순수 텍스트·표 추출 + `DriveFS` 기반 `source_url` 부여 후 `000. Inbox/`에 플랫 적재합니다.
 - **투트랙 운영**:
   - **Track A (파싱 단독 실행)**: 사용자가 *"파싱만 해 줘"* 또는 *"인박스에 넣어 줘"*라고 지시하면 `pkm_parse`의 Stage 1~2(`000. Inbox` 적재 및 시맨틱 프론트매터 보강)까지만 수행하고 대기합니다.
-  - **Track B (파싱 + 위키 컴파일 원스톱 실행)**: 사용자가 *"이 자료 파싱해서 위키에 컴파일/반영해 줘"*라고 지시하면 `pkm_parse` 실행 직후 즉시 본 스킬(`pkm_manager`)의 **Workflow 2**를 연속 실행하여 `400. Wiki` 컴파일, `300. Sources` 이동, `_인덱스_300_Sources.md` 등재 및 기존 노트 역추적 재컴파일까지 원스톱으로 완료합니다.
+  - **Track B (파싱 + 위키 컴파일 원스톱 실행)**: 사용자가 *"이 자료 파싱해서 위키에 컴파일/반영해 줘"*라고 지시하면 `pkm_parse` 실행 직후 즉시 본 스킬(`pkm_manager`)의 **Workflow 2**를 연속 실행하여 `400. Wiki` 컴파일(70% 중첩 흡수 게이트 적용), `300. Sources` 이동, `_인덱스_300_Sources.md` 등재 및 기존 노트 역추적 재컴파일까지 원스톱으로 완료합니다.
 - *(참고: `.agents/skills/pkm_manager/scripts/ingest_sources.py`는 기존 레거시 테스트 스위트 하위 호환용으로만 유지됩니다.)*
 
-#### 2. 볼트 헌법 및 분할 인덱스 무결성 감사 (`vault_linter.py`)
-컴파일 작업 완료 후 최신 헌법 사후 감사 체크리스트(`constitution_loader.py --vault ./My-Wiki --section astep`)를 참조하고, `vault_linter.py`를 실행하여 헌법 준수 여부를 종합 검증합니다:
+#### 2. 볼트 헌법 전 조항 사후 감사 (`A-Step 1~5` & `vault_linter.py`)
+컴파일 및 리팩토링 직후 또는 수시 감사 요청 시 최신 헌법 사후 감사 체크리스트(`constitution_loader.py --vault ./My-Wiki --section astep`)를 참조하고, `vault_linter.py`를 실행하여 헌법 준수 여부를 종합 검증합니다:
 
 ```bash
-# 최신 헌법 통합 사후 감사(A-Step) 체크리스트 런타임 조회
+# 최신 헌법 통합 사후 감사(A-Step 1~5) 체크리스트 런타임 조회
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section astep
 
-# 기본 헌법 감사 (C1 코어속성/도메인, C2 유령링크, C3 고립노트, C4 폴더-origin 정합성, C5 바이너리 격리)
+# 기본 헌법 감사 (C1 코어속성/도메인, C2 유령링크, C3 고립노트, C4 폴더-origin 정합성, C5 바이너리 격리 - 900. config/910. Attached 허용 이미지/다이어그램 예외)
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/vault_linter.py --vault ./My-Wiki
 
 # 분할 인덱스(500. Index) 등재 누락 여부 통합 감사 (--check-index)
@@ -200,6 +224,6 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 # 범용 그래프 위상·유령 노드·이행적 축소 감사 (--check-astep: C7, C8)
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/vault_linter.py --vault ./My-Wiki --check-astep
 
-# C2. 유령 링크("[[]]") 및 이스케이프된 프론트매터(\---) 발견 시 --fix 옵션을 통해 clean null []로 자동 교정
+# C2. 유령 링크("[[]]"), 이스케이프된 프론트매터(\---) 및 도메인 정렬 발견 시 --fix 옵션을 통해 clean null []로 자동 교정
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/vault_linter.py --vault ./My-Wiki --fix
 ```

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Inbox & Wiki Compilation Helper CLI for My-PKM (My-Wiki Rules v3.0).
+"""Inbox & Wiki Compilation Helper CLI for My-PKM (My-Wiki Rules v3.5).
 
 Assists the AI agent during:
   - 1st-Tier Inbox Compilation (Step 1~4):
@@ -139,7 +139,10 @@ def build_v3_frontmatter(
     created_str = normalize_date_str(created, today)
     updated_str = normalize_date_str(updated, today)
 
-    clean_domains = [d.strip() for d in domains if d and str(d).strip()][:2]
+    clean_domains = sorted(
+        list(dict.fromkeys([d.strip() for d in domains if d and str(d).strip()])),
+        key=lambda s: s.lower(),
+    )[:2]
     if not clean_domains:
         clean_domains = ["macro"]
 
@@ -918,7 +921,7 @@ def main() -> int:
     )
 
     parser = argparse.ArgumentParser(
-        description="Inbox & Wiki Compilation Helper CLI for My-PKM (My-Wiki Rules v3.0)"
+        description="Inbox & Wiki Compilation Helper CLI for My-PKM (My-Wiki Rules v3.5)"
     )
     parser.add_argument(
         "--vault",

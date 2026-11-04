@@ -389,7 +389,7 @@ class TestV3VaultLinter(unittest.TestCase):
                 """---
 origin: wiki
 type: hub
-domain: [work, life]
+domain: [education, work]
 up: []
 status: evergreen
 created: 2026-04-12
@@ -415,7 +415,7 @@ updated: 2026-10-29
 # 600 etc Index
 | 문서명 (링크) | 생성/참조일 | 역할 (Type) | 도메인 | 연결된 상위 위키 (up) | 핵심 요약 (1줄) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| [[자유노트]] | 2026-10-29 | `log` | `life` | `[[07_인생 및 철학]]` | 일상 기록 |
+| [[자유노트]] | 2026-10-29 | `log` | `education` | `[[07_자녀교육]]` | 일상 기록 |
 """,
                 encoding="utf-8",
             )
@@ -424,8 +424,8 @@ updated: 2026-10-29
                 """---
 origin: human
 type: log
-domain: [life]
-up: ["[[07_인생 및 철학]]"]
+domain: [education]
+up: ["[[07_자녀교육]]"]
 status: active
 created: 2026-10-29
 updated: 2026-10-29

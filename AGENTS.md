@@ -43,14 +43,23 @@
   - 모든 원본 바이너리는 오직 볼트 외부 디렉터리인 `Inbox_Raw/` (미가공 입력 큐) 및 `Archive_Sources/` (처리 완료 보관소)에서만 관리합니다.
   - 볼트 내부 `000. Inbox/` 및 `300. Sources/`에는 순수 마크다운(`.md`) 파싱본만 적재하며, 원본 바이너리 파일은 프론트매터의 `source_url`(구글 드라이브 뷰어 링크 등)로 참조합니다.
 
-### 2.4 프론트매터 스키마, 유령 링크 방지 및 위키 컴파일 원칙 (Dynamic Rules Reference)
+### 2.4 프론트매터 스키마, 유령 링크 방지, 4계층 컴파일 및 탑다운 골격 원칙 (헌법 v3.5 반영)
 - **프론트매터 스키마 및 도메인 체계**:
-  - 필수 코어 속성(`origin`, `type`, `domain`, `up`, `status`, `created`, `updated`) 및 확장 속성 스키마, 표준 도메인 목록은 `./My-Wiki/My-Wiki Rules.md`에 정의된 규칙을 단일 SSOT로 따릅니다.
+  - 필수 코어 속성(`origin`, `type`, `domain`, `up`, `status`, `created`, `updated`) 및 확장 속성 스키마, 7대 표준 도메인 목록은 `./My-Wiki/My-Wiki Rules.md`에 정의된 규칙을 단일 SSOT로 따릅니다.
+  - 다중 도메인(`domain`) 항목이 2개 이상인 경우, 표기 일관성과 중복 오염 방지를 위해 반드시 알파벳 오름차순(A-Z, 예: `- macro\n  - theory`)으로 정렬합니다.
   - CLI 실행 시 `constitution_loader.py --vault ./My-Wiki --section schema` 또는 `parse_sources.py` / `compile_helper.py`를 통해 최신 규칙을 동적으로 확인합니다.
-- **유령 링크 방지 (Clean Null Rule)**:
-  - `up`, `prev`, `source`, `related` 등 링크 배열 속성에 연결할 대상 노트가 없을 때는 절대로 `"[[]]"`(빈 대괄호 텍스트)로 남겨두지 않고, 반드시 `[]`(YAML 빈 리스트)로 표기합니다.
-- **위키 컴파일 및 상향 메타 컴파일**:
-  - 인박스 컴파일, 역추적 재컴파일, 상향 메타 컴파일 및 추상화 승격 규칙은 `./My-Wiki/My-Wiki Rules.md`의 최신 컴파일 절차를 따르며, `constitution_loader.py --vault ./My-Wiki --section compile` (또는 `mstep`, `astep`)으로 최신 절차를 실시간 조회하여 실행합니다.
+- **유령 링크 방지 및 Clean Null 정식 허용 (Clean Null Rule)**:
+  - `up`, `prev`, `source`, `related` 등 링크 배열 속성에 연결할 대상 노트가 없을 때는 절대로 `"[[]]"`(빈 대괄호 텍스트)나 `""`, `null`로 남겨두지 않고, 반드시 `[]`(YAML 빈 리스트)로 표기합니다.
+  - 상위 총론 위키가 아직 생성되지 않은 각론·사건 위키 및 최상위 Lv1 허브 위키는 `up: []`(Clean Null)로 비워두는 것을 정식 허용하며 고립 노트로 취급하지 않습니다.
+  - `author` 속성은 볼트 내 실존 인물 위키(`[[인물_...]]`)가 있는 경우에만 `[[ ]]` 링크를 걸며, 미생성 저자는 `[[ ]]` 없는 일반 문자열로 표기합니다.
+- **4계층 위키 컴파일 마스터 프로세스 (헌법 규칙 9)**:
+  - **1차 인박스 컴파일 & 70% 중첩 흡수 게이트 (Step 1~4)**: `000. Inbox` 진입 메모를 프론트매터 정규화 후, 기존 동일 Lv2 산하 Lv4 위키와 핵심 주제·메커니즘이 70% 이상 겹치면 신규 위키 생성을 차단하고 기존 위키로 흡수(Merge-on-Write)하며, 신규 위키 생성 시 분할 인덱스 역추적 재컴파일을 실행합니다 (`--section compile`).
+  - **2차 상향 메타 컴파일 (M-Step 1~5)**: 유사 각론 3~5개 누적 시 상향 추상화 총론 위키를 신설하고 `Lv4 ➔ Lv3 ➔ Lv2` 1-Hop 사슬로 매개 리와이어링합니다 (`--section mstep`).
+  - **3차 전 계층 상시 리팩토링 프로토콜 (R-Step 1~5)**: 단발/유사 Lv4 위키 중복(2개+) 감지 시 AI가 자율 수평 통폐합(Merge) 후 사후 보고하며, Lv1~Lv3 구조 개편은 사전 승인 후 실행합니다 (`--section rstep`).
+  - **4차 헌법 전 조항 통합 사후 감사 (A-Step 1~5)**: 컴파일/리팩토링 직후 헌법 12대 규칙 전수 감사(`vault_linter.py --check-astep`)를 필수 수행합니다 (`--section astep`).
+- **복합 지식 아키텍처 및 이론·매크로 탑다운 골격 (Case 1~4)**:
+  - Case 1 (독서 5차원 직교), Case 2 (조간신문 역순 타임라인), Case 3 (산업·기업 234개 N:1:N 모래시계), Case 4 (이론 T1~T5 15개 Lv2 · 매크로 M1~M6 17개 Lv2 탑다운 골격 및 지연 실체화).
+  - 11대 표준 파일명 접두사(`T#_`, `T#-S#_`, `M#_`, `M#-S#_`, `C#_`, `C#-S#_`, `산업_`, `기업_`, `도서_`, `인물_`, `_인덱스_`)를 준수합니다.
 
 ### 2.5 하이브리드 제어 프로토콜 (`agy` 로컬 In-Place I/O + Obsidian MCP)
 - **제미나이 앱 대비 `agy` 네이티브 I/O 차별성**:
@@ -164,24 +173,25 @@ Valley AI(https://valley.ai) 사이트의 '월가 소식' 및 '오늘의 인사�
   ```bash
   .\.venv\Scripts\python.exe .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py --start <YYYY-MM-DD> --end <YYYY-MM-DD>
   ```
-- 크롤링 결과물은 1차적으로 `input_staging/` 폴더에 마크다운 파일(`YYYY-MM-DD_wsj.md`, `YYYY-MM-DD_insight.md`)로 저장됩니다.
+- 크롤링 결과물은 1차적으로 `My-Wiki/000. Inbox/` 폴더에 마크다운 파일(`밸리AI 월가소식 리포트_YYYY-MM-DD.md`, `밸리AI 오늘의 인사이트_YYYY-MM-DD.md`)로 프론트매터 없이 저장되며, 필요 시 `--output-dir` 옵션으로 경로를 지정할 수 있습니다.
 
 ### 4.2 PKM 볼트 연계 적재
-- 수집된 뉴스는 매크로 분석 파이프라인(`macro_portfolio_analysis`)의 입력 자료로 공급됨과 동시에, 영구 지식 자산으로서 볼트 내 `300. Sources/`로 헌법 규칙에 맞추어 마크다운 적재될 수 있습니다.
+- 수집된 뉴스는 볼트 1차 수집 대기열인 `000. Inbox/`에 플랫 적재된 후, `pkm-manager`의 인박스 컴파일 파이프라인을 거쳐 `400. Wiki` 컴파일 및 `300. Sources/`로 일괄 정규화되어 영구 지식 자산으로 적재됩니다.
 - 스크랩 스킬은 순수 데이터 수집용이므로 완료 후 표준 출력을 사용자에게 요약 보고하고 대기(Handoff) 상태로 진입합니다.
 
 ---
 
 ## 5. 하위 스킬 오케스트레이션 맵 (Sub-skill Orchestration Map)
 
-에이전트는 사용자의 의도에 따라 아래의 4개 전용 스킬을 체계적으로 분담·연계하여 실행합니다:
+에이전트는 사용자의 의도에 따라 아래의 5개 전용 스킬을 체계적으로 분담·연계하여 실행합니다:
 
 | 하위 스킬 경로 | 스킬 명칭 | 담당 업무 및 주요 스크립트 | 주 실행 도구 및 인터페이스 |
 | :--- | :--- | :--- | :--- |
-| `.agents/skills/pkm_parse` | `pkm-parse` | • 외부 원천자료(`Inbox_Raw`) `kordoc` 기반 파싱<br>• 내장 이미지 추출 및 위키링크 리라이팅 (`![[<doc_stem>/image_XXX.png]]`)<br>• `000. Inbox/` 플랫 적재 및 2단계 하이브리드 시맨틱 보강<br>• 원본 바이너리 `Archive_Sources/` 아카이빙 (Inbox Zero) | Python CLI (`parse_sources.py`) 및 로컬 파일시스템 I/O |
+| `.agents/skills/pkm_parse` | `pkm-parse` | • 외부 원천자료(`Inbox_Raw`) `kordoc` 기반 파싱<br>• 텍스트 및 GFM 표 중심 순수 파싱 (기본: 이미지 미추출로 동기화 최적화, 선택 시 `--extract-images`)<br>• `000. Inbox/` 플랫 적재 및 2단계 하이브리드 시맨틱 보강<br>• 원본 바이너리 `Archive_Sources/` 아카이빙 (Inbox Zero) | Python CLI (`parse_sources.py`) 및 로컬 파일시스템 I/O |
 | `.agents/skills/pkm_manager` | `pkm-manager` | • `./My-Wiki/My-Wiki Rules.md` 동적 SSOT 로드 (`scripts/constitution_loader.py`)<br>• `000. Inbox/` 인박스 컴파일 및 역추적 재컴파일 (`scripts/compile_helper.py`)<br>• 상향 메타 컴파일 및 `500. Index` 분할 인덱스 관리<br>• 볼트 헌법 및 인덱스 무결성 감사 (`scripts/vault_linter.py`)<br>• 레거시 원천자료 ETL 하위 호환 (`scripts/ingest_sources.py`) | Python CLI (`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`), `obsidian` MCP 및 로컬 정션(`./My-Wiki`) In-Place I/O |
+| `.agents/skills/pkm_clearing` | `pkm-clearing` | • 000~500 폴더(하위폴더 포함) 동기화 충돌/복제 접미사(`(1)`, `conflict` 등) 감지 및 정규화<br>• 동일 제목 다중 메모 발생 시 최신 버전(Winner) 선별 및 통합<br>• 볼트 외부 사전 안전 백업 (`.pkm_clearing_backup/`)<br>• 위키링크 무결성 복구 | Python CLI (`vault_clearing.py`) 및 로컬 파일시스템 I/O |
 | `.agents/skills/macro_portfolio_analysis` | `macro-portfolio-analysis` | • 거시경제 리포트 분석 및 4차원 직교 파라미터 추출<br>• 결정론적 퀀트 연산 엔진 (`scripts/calculate_metrics.py`)<br>• 포트폴리오 스냅샷 추출 (`scripts/fetch_portfolio.py`)<br>• Supabase DB 적재 (`scripts/load_to_supabase.py`) 및 Notion 업로드 | Python 퀀트 스크립트 및 Supabase REST API / Notion API |
-| `.agents/skills/valley_ai_scrap` | `valley-ai-scrap` | • Valley AI 월가 소식 및 인사이트 뉴스 크롤링 (`scripts/scrap_valley_news.py`)<br>• `input_staging/` 및 `300. Sources/` 적재 연계 | Python 웹 스크래퍼 및 로컬 파일시스템 I/O |
+| `.agents/skills/valley_ai_scrap` | `valley-ai-scrap` | • Valley AI 월가 소식 및 인사이트 뉴스 크롤링 (`scripts/scrap_valley_news.py`)<br>• `My-Wiki/000. Inbox/` 기본 적재 및 파일명 정규화 | Python 웹 스크래퍼 및 로컬 파일시스템 I/O |
 
 ---
 

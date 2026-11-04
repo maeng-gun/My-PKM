@@ -451,7 +451,7 @@ class TestM1AdversarialCLIFlagsAndSafety(unittest.TestCase):
         fm = parse_sources.generate_frontmatter(domain=["macro", "equity", "theory", "work"])
         data = yaml.safe_load(fm.split("---")[1])
         self.assertEqual(len(data["domain"]), 2, "Domain must be strictly capped at max 2")
-        self.assertEqual(data["domain"], ["macro", "equity"])
+        self.assertEqual(data["domain"], ["equity", "macro"])
 
     def test_adv_img_08_table_cell_and_inline_images(self):
         """Stress-test: Markdown images inside table cells and complex formatting."""

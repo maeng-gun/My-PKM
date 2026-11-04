@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Vault Constitutional Linter CLI for My-PKM (My-Wiki Rules v3.0+).
+"""Vault Constitutional Linter CLI for My-PKM (My-Wiki Rules v3.5+).
 
 Validates Obsidian knowledge vault (My-Wiki) integrity against the Constitutional Checks
 dynamically loaded via `constitution_loader.py` from `./My-Wiki/My-Wiki Rules.md`:
@@ -172,7 +172,7 @@ def is_excluded_path(path: Path, vault_root: Path, include_inbox: bool = False) 
             return True
         if part == "000. Inbox" and not include_inbox:
             return True
-        if part in ["900. config", "Notion", ".obsidian", ".trash"]:
+        if part in ["900. config", "Notion", ".obsidian", ".trash", "600. etc"]:
             return True
     return False
 
@@ -253,12 +253,66 @@ def fix_ghost_links(content: str) -> Tuple[str, bool]:
     return content, False
 
 
+def fix_domain_order(content: str) -> Tuple[str, bool]:
+    match = re.match(r"^(---\r?\n)(.*?\r?\n)?(---(?:\r?\n|$))(.*)$", content, re.DOTALL)
+    if not match:
+        return content, False
+    header = match.group(1)
+    fm_content = match.group(2) or ""
+    footer = match.group(3)
+    body = match.group(4)
+
+    # 1. Match block style:
+    pattern_block = re.compile(r'(?m)^([ \t]*domain:[ \t]*\r?\n)((?:[ \t]*-[ \t]*[^\r\n]+\r?\n)+)')
+    m_block = pattern_block.search(fm_content)
+    if m_block:
+        items_text = m_block.group(2)
+        item_lines = items_text.splitlines(keepends=True)
+        parsed_items = []
+        for l in item_lines:
+            stripped = l.strip()
+            if stripped.startswith("-"):
+                val = stripped[1:].strip().strip("'\"")
+                indent_part = l[:l.find("-") + 1] + " "
+                has_quote = '"' if '"' in stripped else ("'" if "'" in stripped else "")
+                parsed_items.append((indent_part, has_quote, val))
+        if len(parsed_items) >= 2:
+            values = [p[2] for p in parsed_items]
+            sorted_values = sorted(values, key=lambda s: s.lower())
+            if values != sorted_values:
+                ending = '\r\n' if items_text.endswith('\r\n') else '\n'
+                indent = parsed_items[0][0]
+                quote = parsed_items[0][1]
+                new_lines = [f"{indent}{quote}{val}{quote}{ending}" for val in sorted_values]
+                new_items_text = "".join(new_lines)
+                new_fm = fm_content[:m_block.start(2)] + new_items_text + fm_content[m_block.end(2):]
+                return f"{header}{new_fm}{footer}{body}", True
+
+    # 2. Match flow style: domain: [theory, macro]
+    pattern_flow = re.compile(r'(?m)^([ \t]*domain:[ \t]*)(\[[^\]]+\])')
+    m_flow = pattern_flow.search(fm_content)
+    if m_flow:
+        prefix = m_flow.group(1)
+        raw_inside = m_flow.group(2)[1:-1]
+        items_raw = [x.strip() for x in raw_inside.split(',') if x.strip()]
+        clean_items = [x.strip('\'"') for x in items_raw]
+        if len(clean_items) >= 2:
+            sorted_clean = sorted(clean_items, key=lambda s: s.lower())
+            if clean_items != sorted_clean:
+                new_flow = f"{prefix}[{', '.join(sorted_clean)}]"
+                new_fm = fm_content[:m_flow.start()] + new_flow + fm_content[m_flow.end():]
+                return f"{header}{new_fm}{footer}{body}", True
+
+    return content, False
+
+
 def audit_markdown_note(
     file_path: Path,
     vault_root: Path,
     auto_fix: bool = False,
     verbose: bool = False,
     cfg: Optional[ConstitutionConfig] = None,
+    check_astep: bool = False,
 ) -> List[Violation]:
     """Audit a single markdown note against checks C1 to C4."""
     violations: List[Violation] = []
@@ -289,12 +343,16 @@ def audit_markdown_note(
 
     # Auto-fix pass if requested
     if auto_fix:
-        fixed_text, was_modified = fix_ghost_links(raw_text)
-        if was_modified:
+        fixed_text, was_modified_ghost = fix_ghost_links(raw_text)
+        fixed_text, was_modified_dom = fix_domain_order(fixed_text)
+        if was_modified_ghost or was_modified_dom:
             file_path.write_text(fixed_text, encoding="utf-8")
             raw_text = fixed_text
             if verbose:
-                print(f"[Auto-Fixed] Repaired ghost links in {file_path.name}")
+                if was_modified_ghost:
+                    print(f"[Auto-Fixed] Repaired ghost links in {file_path.name}")
+                if was_modified_dom:
+                    print(f"[Auto-Fixed] Sorted domain list alphabetically in {file_path.name}")
 
     lines = raw_text.splitlines()
 
@@ -382,6 +440,19 @@ def audit_markdown_note(
                             f"Non-standard domain code '{d_str}' (must be one of {sorted(std_domains)})",
                         )
                     )
+            # Alphabetical sort check for multi-domain list (>= 2 items, under A-Step 2)
+            if check_astep and len(dom_list) >= 2:
+                dom_clean = [str(d).strip() for d in dom_list]
+                dom_sorted = sorted(dom_clean, key=lambda s: s.lower())
+                if dom_clean != dom_sorted:
+                    violations.append(
+                        Violation(
+                            file_path,
+                            "C7",
+                            dom_line,
+                            f"Domain list is not sorted alphabetically: {dom_clean} (must be {dom_sorted})",
+                        )
+                    )
 
     # Check 2 (C2: Ghost Links)
     ghost_detected = False
@@ -450,18 +521,18 @@ def audit_markdown_note(
         is_index_hub = "500. Index" in file_path.parts and data.get("type") == "hub"
         is_in_wiki = "400. Wiki" in file_path.parts
 
-        # Level 1 Master Hubs (C1_~C8_, 01_~07_, level: 1 hub, or in l1_hubs)
+        # Level 1 Master Hubs (C1_~C8_, T1_~T5_, M1_~M6_, 01_~07_, level: 1 hub, or in l1_hubs)
         is_l1_hub = is_in_wiki and (
             file_path.name in l1_hubs
             or (data.get("type") == "hub" and level_val == 1)
-            or (bool(re.match(r"^C\d+_", file_path.name)) and level_val <= 1 and data.get("type") == "hub")
+            or (bool(re.match(r"^[TMC]\d+_", file_path.name)) and level_val <= 1 and data.get("type") == "hub")
         )
 
-        # Hierarchical industry wikis that MUST have up: Lv2 (C#-S#), Lv3 (산업_), Lv4 (기업_)
+        # Hierarchical structural wikis that MUST have up: Lv2 (C#-S#, T#-S#, M#-S#), Lv3 (산업_), Lv4 (기업_)
         is_hierarchical_industry_wiki = is_in_wiki and (
             file_path.name.startswith("산업_")
             or file_path.name.startswith("기업_")
-            or bool(re.match(r"^C\d+-S", file_path.name))
+            or bool(re.match(r"^[TMC]\d+-S", file_path.name))
         )
 
         # Case / Event wikis in 400. Wiki (allowed to have up: [] when parent general wiki does not exist)
@@ -475,6 +546,8 @@ def audit_markdown_note(
         is_source_note = data.get("type") == "source" or "300. Sources" in file_path.parts
         is_log_note = data.get("type") == "log" or "200. AI_logs" in file_path.parts
 
+        is_root_project_hub = file_path.name == "밸리AI 독서모임.md" or (data.get("type") == "project" and level_val <= 3)
+
         is_exempt = (
             is_root_constitution
             or is_index_hub
@@ -482,6 +555,7 @@ def audit_markdown_note(
             or is_case_or_event_wiki
             or is_source_note
             or is_log_note
+            or is_root_project_hub
         )
 
         if not is_exempt:
@@ -759,9 +833,9 @@ def audit_astep(
                     )
                 )
             elif (
-                val.startswith(("산업_", "기업_"))
-                or bool(re.match(r"^C\d+_", val))
-                or bool(re.match(r"^C\d+-S[^_]*_", val))
+                val.startswith(("산업_", "기업_", "도서_", "인물_"))
+                or bool(re.match(r"^[TMC]\d+_", val))
+                or bool(re.match(r"^[TMC]\d+-S[^_]*_", val))
             ) and not any(ch in val for ch in ("[", "]", "~")):
                 if val not in valid_targets:
                     violations.append(
@@ -807,8 +881,8 @@ def audit_astep(
             is_structural = (
                 stem.startswith("산업_")
                 or stem.startswith("기업_")
-                or bool(re.match(r"^C\d+_", stem))
-                or bool(re.match(r"^C\d+-S", stem))
+                or bool(re.match(r"^[TMC]\d+_", stem))
+                or bool(re.match(r"^[TMC]\d+-S", stem))
                 or fm_dict.get("type") in ("hub", "concept")
             )
             raw_prev = fm_dict.get("prev")
@@ -831,17 +905,21 @@ def audit_astep(
             is_case_wiki = not (
                 stem.startswith("산업_")
                 or stem.startswith("기업_")
-                or bool(re.match(r"^C\d+", stem))
+                or stem.startswith("도서_")
+                or stem.startswith("인물_")
+                or bool(re.match(r"^[TMC]\d+", stem))
             )
             if is_case_wiki:
                 for u in up_stems:
-                    if bool(re.match(r"^C\d+", u)):
+                    # In equity: cannot link directly to C1 (Lv1) or C#-S# (Lv2)
+                    # In theory/macro: cannot link directly to T#_ / M#_ (Lv1), but CAN link to T#-S# / M#-S# (Lv2) if Lv3 roll-up not yet created
+                    if bool(re.match(r"^C\d+", u)) or bool(re.match(r"^[TM]\d+_", u)):
                         violations.append(
                             Violation(
                                 file_path,
                                 "C8",
                                 1,
-                                f"1-Hop scope violation in case/event wiki '{stem}': 'up: [[{u}]]' cannot link directly to Level 1 or Level 2 (must link to Lv4 company or Lv3 sub-industry, or use clean null [])",
+                                f"1-Hop scope violation in case/event wiki '{stem}': 'up: [[{u}]]' cannot link directly to Level 1 ancestor or Level 1/2 industry cluster (must link to Lv4 company, Lv3 sub-industry, or Lv2 theory/macro stage, or use clean null [])",
                             )
                         )
 
@@ -858,8 +936,8 @@ def audit_astep(
                             line_num = orig_idx + 1
                             break
 
-                    # Level 1 Hub body: can only link to its own Level 2 children (C#-S#)
-                    if bool(re.match(r"^C\d+_", stem)):
+                    # Level 1 Hub body: can only link to its own Level 2 children (C#-S#, T#-S#, M#-S#)
+                    if bool(re.match(r"^[TMC]\d+_", stem)):
                         cluster_code = stem.split("_")[0]
                         if not bool(re.match(rf"^{cluster_code}-S\d+", t_stem)):
                             violations.append(
@@ -1067,6 +1145,7 @@ def audit_vault(
             auto_fix=auto_fix,
             verbose=verbose,
             cfg=cfg,
+            check_astep=check_astep,
         )
         all_violations.extend(note_violations)
 

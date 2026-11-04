@@ -151,9 +151,9 @@ class TestConstitutionLoaderAdversarial(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = constitution_loader.load_constitution(tmp)
             self.assertFalse(cfg.ssot_exists)
-            self.assertEqual(len(cfg.standard_domains), 9)
-            self.assertIn("quant", cfg.standard_domains)
-            self.assertIn("life", cfg.standard_domains)
+            self.assertEqual(len(cfg.standard_domains), 7)
+            self.assertNotIn("quant", cfg.standard_domains)
+            self.assertIn("education", cfg.standard_domains)
 
 
 class TestCompileHelperAdversarial(unittest.TestCase):

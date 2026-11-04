@@ -1,13 +1,13 @@
 ---
 name: pkm-parse
-description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HWPX, HWP, XLSX, DOCX, PPTX) kordoc 기반 파싱, 910. Attached 이미지 추출 및 ![[<doc_stem>/image_XXX.png]] 위키링크 리라이팅, 000. Inbox/ 플랫 적재, 2단계 하이브리드 프론트매터 생성 및 시맨틱 보강, Archive_Sources/ 아카이빙(Inbox Zero)"
+description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HWPX, HWP, XLSX, DOCX, PPTX) kordoc 기반 파싱(기본: 순수 텍스트·GFM 표 추출, 선택적 --extract-images), 000. Inbox/ 플랫 적재, 2단계 하이브리드 프론트매터 생성 및 시맨틱 보강, Archive_Sources/ 아카이빙(Inbox Zero)"
 ---
 
 # Dedicated PKM Parsing Skill (`pkm_parse`)
 
 본 스킬은 `My-PKM` 시스템의 외부 원천자료 수집 큐(`Inbox_Raw/`)에 반입된 다양한 포맷의 미가공 바이너리 및 텍스트 문서(`PDF`, `HWPX`, `HWP`, `XLSX`, `DOCX`, `PPTX`, `TXT`, `MD`)를 `kordoc` 엔진으로 파싱하여 옵시디언 볼트의 1차 임시 수집 버퍼인 `./My-Wiki/000. Inbox/`에 마크다운 노트로 변환 적재하고, 원본 바이너리를 `./Archive_Sources/`로 안전하게 아카이빙(Inbox Zero)하는 전용 문서 수집·파싱 스킬입니다.
 
-문서 파싱 시 본문에 포함된 도표(GFM 테이블)와 내장 이미지를 고품질로 추출하여 `./My-Wiki/900. config/910. Attached/<doc_stem>/image_XXX.png`에 저장하고, 마크다운 본문의 모든 이미지 링크를 옵시디언 네이티브 위키링크 임베드(`![[<doc_stem>/image_XXX.png]]`)로 정밀 리라이팅합니다.
+문서 파싱 시 본문에 포함된 도표(GFM 테이블)와 텍스트를 고품질로 추출하여 순수 텍스트 기반 마크다운으로 변환합니다. 볼트 스토리지 최적화 및 클라우드 동기화 병목 방지를 위해 **이미지 파일은 기본적으로 추출하지 않고 순수 텍스트와 GFM 표만 보존(기본값)**하며, 필요한 경우에 한해 `--extract-images` 플래그를 통해 `./My-Wiki/900. config/910. Attached/<doc_stem>/image_XXX.png`로 선별 추출 및 위키링크 임베드(`![[<doc_stem>/image_XXX.png]]`)를 적용합니다.
 
 ---
 
@@ -36,7 +36,7 @@ description: "Dedicated PKM Parsing Skill: Inbox_Raw 외부 원천자료(PDF, HW
   - `Inbox_Raw/`와 `Archive_Sources/`는 구글 드라이브 마운트(`G:\내 드라이브\...`)로 연결된 NTFS 디렉터리 정션(Junction)입니다.
   - 파싱된 마크다운 노트 프론트매터의 `source_url` 속성에는 단순 로컬 상대 경로 대신, 클릭 즉시 구글 드라이브에 아카이빙된 원본 자료를 열람할 수 있는 **구글 드라이브 뷰어 링크(`https://drive.google.com/open?id=<FILE_ID>&usp=drive_fs`)**를 기입합니다.
   - `parse_sources.py`의 `resolve_gdrive_url()` 함수가 정션의 실제 타겟 경로(`Path.resolve()`)를 추적하고 Google Drive for Desktop 로컬 메타데이터 DB(`%LOCALAPPDATA%\Google\DriveFS\*\metadata_sqlite_db`)의 `items` / `stable_parents` / `stable_ids` 테이블을 조회하여 Google Drive File ID를 자동으로 추출·적용합니다. (구글 드라이브 마운트가 아닌 로컬 임시 테스트 환경 등에서만 `Archive_Sources/<subfolder>/<filename>` 상대 경로로 폴백합니다.)
-- 볼트 내부 첨부파일은 오직 경량 이미지(`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`)에 한해 `./My-Wiki/900. config/910. Attached/<doc_stem>/` 하위에만 격리 보관합니다.
+- 볼트 내부 첨부파일은 `--extract-images` 활성화 시에만 오직 경량 이미지(`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`)에 한해 `./My-Wiki/900. config/910. Attached/<doc_stem>/` 하위에만 격리 보관합니다 (기본 파싱 시에는 이미지 미추출로 볼트 용량 제로 유지).
 
 ### 1.4 `000. Inbox/` 플랫 구조 및 유령 링크 방지 (Clean Null) 원칙
 - `000. Inbox/`는 분류 대기 중인 모든 임시 메모의 1차 수집소이며, **하위 폴더가 없는 단일(Flat) 디렉터리** 구조를 유지합니다. 모든 변환 노트는 `./My-Wiki/000. Inbox/<stem>.md`로 생성됩니다.
@@ -183,7 +183,7 @@ Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 
 
 ---
 
-## 3. CLI 19개 플래그 상세 레퍼런스 (19 CLI Flags)
+## 3. CLI 21개 플래그 상세 레퍼런스 (21 CLI Flags)
 
 `parse_sources.py`는 메타데이터 설정, 파싱 제어, 안전성을 위한 19개의 CLI 플래그를 완벽히 지원합니다:
 
@@ -207,7 +207,9 @@ Stage 1 파싱 완료 후 에이전트는 아래 5단계 프로토콜에 따라 
 | 16 | `--ocr` | `flag` | `False` | 스캔된 이미지 문서에 대해 kordoc 내장 PP-OCRv5 한국어 광학 문자 인식 활성화. |
 | 17 | `--dry-run` | `flag` | `False` | 디스크 파일 생성 및 원본 이동 없이 변환 결과 및 경로를 사전 점검하는 안전 모드. |
 | 18 | `--force` | `flag` | `False` | 볼트 내 기생성된 노트나 아카이브 대상 파일이 존재해도 덮어쓰기 허용. |
-| 19 | `--verbose` | `flag` | `False` | 파싱 과정 및 세부 로그 콘솔 출력. |
+| 19 | `--extract-images` | `flag` | `False` | 내장 이미지 추출 및 위키링크 임베드 활성화 (기본값: False, 미지정 시 순수 텍스트/표만 파싱). |
+| 20 | `--no-images` | `flag` | `True` | 이미지 추출 명시적 비활성화 및 로컬 이미지 태그 자동 제거 (기본 동작). |
+| 21 | `--verbose` | `flag` | `False` | 파싱 과정 및 세부 로그 콘솔 출력. |
 
 ---
 

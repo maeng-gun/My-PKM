@@ -316,6 +316,7 @@ Key takeaway: Soft landing scenario remains the baseline.
                 "--org", "[[Valley AI Inc]]",
                 "--published", "2026-10",
                 "--table-format", "gfm",
+                "--extract-images",
             ]
             parse_res = subprocess.run(
                 parse_cmd,
