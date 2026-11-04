@@ -92,20 +92,6 @@ ALLOWED_ATTACHMENT_EXTENSIONS: Set[str] = {
     ".canvas",
 }
 
-GHOST_HUB_NAMES: Set[str] = {
-    "국내 거시경제 및 정책",
-    "글로벌 매크로 동향",
-    "금리·채권 및 통화정책",
-    "외환·원자재 및 글로벌 유동성",
-    "거시경제 및 통화 이론",
-    "절세 및 연금계좌 관리",
-    "투자 유니버스",
-    "개별 기업 마스터",
-    "산업 및 섹터 밸류체인",
-    "기업 거버넌스 및 주주환원 사례",
-    "조간신문 주요 사건 트래커",
-}
-
 CORE_ATTRIBUTES: List[str] = [
     "origin",
     "type",
@@ -262,6 +248,11 @@ def audit_markdown_note(
 ) -> List[Violation]:
     """Audit a single markdown note against checks C1 to C4."""
     violations: List[Violation] = []
+    if cfg is None:
+        try:
+            cfg = load_constitution(vault_root)
+        except Exception:
+            cfg = None
     core_attrs = cfg.core_attributes if cfg else CORE_ATTRIBUTES
     std_domains = set(cfg.standard_domains) if cfg else STANDARD_DOMAINS
     l1_hubs = set(cfg.level_1_hubs) if cfg else LEVEL_1_HUBS
@@ -297,6 +288,28 @@ def audit_markdown_note(
                 print(f"[Auto-Fixed] Repaired ghost links in {file_path.name}")
 
     lines = raw_text.splitlines()
+
+    # Check if note resides in 000. Inbox (uncompiled staging queue)
+    try:
+        rel_parts = file_path.relative_to(vault_root).parts
+    except ValueError:
+        rel_parts = file_path.parts
+    is_inbox = "000. Inbox" in rel_parts
+
+    if is_inbox:
+        # Check flat structure requirement (no subdirectories in 000. Inbox)
+        if len(rel_parts) > 2:
+            violations.append(
+                Violation(
+                    file_path,
+                    "C4",
+                    1,
+                    f"000. Inbox must maintain flat structure without subdirectories: '{file_path.name}'",
+                )
+            )
+        # If note has no frontmatter, it is an uncompiled staging note (valid)
+        if not lines or lines[0].strip() != "---":
+            return violations
 
     # Locate YAML frontmatter
     if not lines or lines[0].strip() != "---":
@@ -336,6 +349,10 @@ def audit_markdown_note(
         return violations
 
     # Check 1 (C1: Core Attributes & Domain Validation)
+    if is_inbox:
+        # Notes in 000. Inbox are uncompiled staging files; exempt from C1/C4 checks
+        return violations
+
     for req_key in core_attrs:
         if req_key not in data:
             violations.append(
@@ -473,7 +490,11 @@ def audit_markdown_note(
         )
 
         is_source_note = data.get("type") == "source" or "300. Sources" in file_path.parts
-        is_log_note = data.get("type") == "log" or "200. AI_logs" in file_path.parts
+        is_log_note = (
+            data.get("type") == "log"
+            or "200. AI_logs" in file_path.parts
+            or "700. utilize" in file_path.parts
+        )
 
         is_exempt = (
             is_root_constitution
@@ -740,15 +761,7 @@ def audit_astep(
                         f"Backtick-wrapped wikilink detected: '`{val}`' (wikilinks inside backticks are forbidden in 400. Wiki)",
                     )
                 )
-            elif val in GHOST_HUB_NAMES:
-                violations.append(
-                    Violation(
-                        file_path,
-                        "C7",
-                        tick_line,
-                        f"Fake ghost note backtick detected: '`{val}`' (uncreated ghost note backticks are strictly forbidden and must be deleted)",
-                    )
-                )
+
             elif bool(re.match(r"^[1234](?:-[12])?단계:", val)):
                 violations.append(
                     Violation(
@@ -759,7 +772,7 @@ def audit_astep(
                     )
                 )
             elif (
-                val.startswith(("산업_", "기업_"))
+                val.startswith(("산업_", "기업_", "이론_", "매크로_"))
                 or bool(re.match(r"^C\d+_", val))
                 or bool(re.match(r"^C\d+-S[^_]*_", val))
             ) and not any(ch in val for ch in ("[", "]", "~")):

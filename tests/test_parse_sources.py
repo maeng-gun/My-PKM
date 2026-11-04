@@ -84,6 +84,44 @@ class TestParseSourcesUnit(unittest.TestCase):
                 f"parse_sources.py --help must describe flag '{flag}'",
             )
 
+    def test_default_pure_markdown_output_without_frontmatter(self):
+        """Verify that running without --include-frontmatter produces pure markdown in 000. Inbox without frontmatter."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp = Path(tmpdir)
+            inbox = tmp / "Inbox_Raw"
+            inbox.mkdir(parents=True)
+            vault = tmp / "My-Wiki"
+            archive = tmp / "Archive_Sources"
+
+            sample = inbox / "pure_raw_study.txt"
+            sample.write_text("# Core Market Findings\n\nDetailed interest rate mechanism analysis.", encoding="utf-8")
+
+            res = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT_PATH),
+                    "--file", str(sample),
+                    "--inbox", str(inbox),
+                    "--vault", str(vault),
+                    "--archive", str(archive),
+                ],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+            )
+            self.assertEqual(res.returncode, 0, f"Command failed: {res.stderr}\nOutput: {res.stdout}")
+
+            out_note = vault / "000. Inbox" / "pure_raw_study.md"
+            self.assertTrue(out_note.exists())
+
+            content = out_note.read_text(encoding="utf-8")
+            self.assertFalse(content.startswith("---"), "Default output note must not contain YAML frontmatter delimiter '---'")
+            self.assertNotIn("origin: source", content, "Default note must not contain frontmatter attributes")
+            self.assertIn("# Core Market Findings", content, "Pure markdown body must be preserved")
+            self.assertIn("Detailed interest rate mechanism analysis.", content)
+
     def test_clean_null_when_up_omitted(self):
         """2. Verify up: [] is produced when --up is omitted (no '[[]]' ghost link)."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -105,6 +143,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--vault", str(vault),
                     "--archive", str(archive),
                     "--domain", "macro",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,
@@ -143,6 +182,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--vault", str(vault),
                     "--archive", str(archive),
                     "--up", "[[]]",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,
@@ -232,6 +272,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--ref-date", "2026-10-26",
                     "--aliases", "Deep Dive 2026,Macro Review",
                     "--summary", "An executive summary of macro liquidity and rates.",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,
@@ -292,6 +333,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--vault", str(vault),
                     "--archive", str(archive),
                     "--subfolder", "310. Reports_Papers",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,
@@ -329,6 +371,7 @@ class TestParseSourcesUnit(unittest.TestCase):
                     "--vault", str(vault),
                     "--archive", str(archive),
                     "--subfolder", "310. Reports_Papers",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,
@@ -392,21 +435,10 @@ class TestParseSourcesUnit(unittest.TestCase):
             self.assertTrue(out_note.exists(), "Markdown note must be created in 000. Inbox")
             note_content = out_note.read_text(encoding="utf-8")
 
-            # Check image attachments directory
+            # Verify image extraction and wikilink rewriting are disabled
             attached_dir = vault / "900. config" / "910. Attached" / sample_stem
-            if REFERENCE_PDF.exists():
-                self.assertTrue(attached_dir.exists(), f"Attached images directory must exist at {attached_dir}")
-                extracted_images = list(attached_dir.glob("image_*.png"))
-                self.assertGreater(len(extracted_images), 0, "At least one image must be extracted")
-
-                # Verify markdown body rewrites references to ![[<doc_stem>/image_XXX.png]]
-                first_img_name = extracted_images[0].name
-                expected_wikilink = f"![[{sample_stem}/{first_img_name}]]"
-                self.assertIn(
-                    expected_wikilink,
-                    note_content,
-                    f"Markdown note body must contain rewritten wikilink embed '{expected_wikilink}'",
-                )
+            self.assertFalse(attached_dir.exists(), f"Attached images directory must NOT be created at {attached_dir}")
+            self.assertNotIn(f"![[{sample_stem}/", note_content, "Markdown note body must NOT contain rewritten wikilink embeds")
 
             # Assert raw PDF was archived and inbox zero reached
             self.assertFalse(sample_file.exists(), "Source PDF must be removed from Inbox_Raw")
