@@ -3,13 +3,12 @@
 
 Converts raw binary and text documents from Inbox_Raw (PDF, HWPX, HWP, XLSX, DOCX, PPTX, TXT, MD)
 using kordoc (dual-engine Python SDK with Node CLI fallback) into Obsidian markdown notes
-conforming to Obsidian/PKM Constitution v2.1 2-tier YAML frontmatter schema (Rule 1, 2, 7).
+into pure markdown notes staged in Obsidian vault's 000. Inbox/<stem>.md (uncompiled staging queue, with optional frontmatter via --include-frontmatter).
 
 Features:
-- Extracts embedded document images to My-Wiki/900. config/910. Attached/<doc_stem>/image_XXX.png.
-- Rewrites markdown and HTML image links to native Obsidian wikilink embeds: ![[<doc_stem>/image_XXX.png]].
-- Generates 2-tier YAML frontmatter with 7 core attributes + Clean Null up: [] + Tier 2 source metadata.
-- Places parsed notes flat in My-Wiki/000. Inbox/<stem>.md (staging buffer).
+- Extracts text and tables (GFM/HTML) from binary documents into clean markdown.
+- Places parsed notes flat in My-Wiki/000. Inbox/<stem>.md as pure markdown (staging buffer).
+- Optional --include-frontmatter flag for 2-tier YAML frontmatter with Clean Null up: [].
 - Archives processed raw binaries to Archive_Sources/<subfolder>/ (achieving Inbox Zero).
 - Resolves archived files via NTFS junction + Google Drive for Desktop (DriveFS) SQLite DB to
   populate frontmatter source_url: https://drive.google.com/open?id=<FILE_ID>&usp=drive_fs
@@ -43,83 +42,24 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-STANDARD_DOMAINS = {
-    "theory",
-    "macro",
-    "equity",
-    "portfolio",
-    "work",
-    "ai-pkm",
-    "education",
-}
-
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"}
+# Attempt dynamic import of constitution loader
+SCRIPT_DIR = Path(__file__).resolve().parent
+PKM_MANAGER_SCRIPTS = SCRIPT_DIR.parent.parent / "pkm_manager" / "scripts"
+if PKM_MANAGER_SCRIPTS.exists() and str(PKM_MANAGER_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(PKM_MANAGER_SCRIPTS))
 
 
-def rewrite_image_links(body: str, doc_stem: str) -> str:
-    """Rewrite markdown and HTML image links to native Obsidian wikilink embeds: ![[<doc_stem>/<filename>]].
+def get_dynamic_standard_domains(vault_path: Path | str = "./My-Wiki") -> List[str]:
+    """Dynamically load standard domains from My-Wiki Rules.md via constitution_loader."""
+    try:
+        from constitution_loader import load_constitution
 
-    Preserves remote HTTP/HTTPS URLs and base64 data URIs.
-    """
-    # 1. Replace markdown image links: ![alt](url)
-    def _md_img_repl(match: re.Match[str]) -> str:
-        raw_url = match.group(2).strip()
-        lower_url = raw_url.lower()
-        if (
-            lower_url.startswith("http://")
-            or lower_url.startswith("https://")
-            or lower_url.startswith("data:")
-            or lower_url.startswith("ftp://")
-        ):
-            return match.group(0)
-
-        clean_url = raw_url.split("?")[0].split("#")[0].replace("\\", "/")
-        filename = clean_url.split("/")[-1].strip()
-        if not filename:
-            return match.group(0)
-        return f"![[{doc_stem}/{filename}]]"
-
-    body = re.sub(r"!\[(.*?)\]\((.*?)\)", _md_img_repl, body)
-
-    # 2. Replace HTML img tags: <img ... src="..." ...>
-    def _html_img_repl(match: re.Match[str]) -> str:
-        tag = match.group(0)
-        src_match = re.search(r'src=["\']([^"\']+)["\']', tag, re.IGNORECASE)
-        if not src_match:
-            return tag
-        raw_src = src_match.group(1).strip()
-        lower_src = raw_src.lower()
-        if (
-            lower_src.startswith("http://")
-            or lower_src.startswith("https://")
-            or lower_src.startswith("data:")
-            or lower_src.startswith("ftp://")
-        ):
-            return tag
-
-        clean_src = raw_src.split("?")[0].split("#")[0].replace("\\", "/")
-        filename = clean_src.split("/")[-1].strip()
-        if not filename:
-            return tag
-        return f"![[{doc_stem}/{filename}]]"
-
-    body = re.sub(r"<img\b[^>]*>", _html_img_repl, body, flags=re.IGNORECASE)
-
-    # 3. Replace bare Obsidian image wikilinks without doc_stem: ![[image_001.png]]
-    def _wikilink_img_repl(match: re.Match[str]) -> str:
-        target = match.group(1).strip().replace("\\", "/")
-        if target.startswith(f"{doc_stem}/"):
-            return match.group(0)
-        filename = target.split("/")[-1]
-        suffix = Path(filename).suffix.lower()
-        if suffix in IMAGE_EXTENSIONS:
-            return f"![[{doc_stem}/{filename}]]"
-        return match.group(0)
-
-    body = re.sub(r"!\[\[(.*?)\]\]", _wikilink_img_repl, body)
-
-    return body
-
+        cfg = load_constitution(vault_path)
+        if cfg and cfg.standard_domains:
+            return list(cfg.standard_domains)
+    except Exception:
+        pass
+    return ["theory", "macro", "equity", "portfolio", "work", "ai-pkm", "education"]
 
 def strip_image_links(body: str) -> str:
     """Strip markdown image tags and Obsidian image wikilinks from body."""
@@ -164,8 +104,7 @@ def parse_source_file(
                 kwargs["ocr"] = True
             res = client.parse(str(file_path), **kwargs)
             if res.success and res.markdown is not None:
-                images = list(res.images) if hasattr(res, "images") and res.images else []
-                return res.markdown, images, res.metadata or {}
+                return res.markdown, [], res.metadata or {}
             elif verbose and not res.success:
                 print(f"[SDK Warning] {res.error} (code={res.code})", file=sys.stderr)
     except Exception as exc:
@@ -203,12 +142,7 @@ def parse_source_file(
                 )
                 if proc.returncode == 0 and tmp_out.exists() and tmp_out.stat().st_size > 0:
                     content = tmp_out.read_text(encoding="utf-8", errors="replace")
-                    # Scan for images extracted by CLI in tmp_dir
-                    extracted_images: List[Tuple[str, bytes]] = []
-                    for img_p in tmp_dir.rglob("*"):
-                        if img_p.is_file() and img_p.suffix.lower() in IMAGE_EXTENSIONS:
-                            extracted_images.append((img_p.name, img_p.read_bytes()))
-                    return content, extracted_images, {}
+                    return content, [], {}
                 elif verbose:
                     print(f"[CLI Warning] {proc.stderr}", file=sys.stderr)
             except Exception as exc:
@@ -223,7 +157,6 @@ def parse_source_file(
 
             with zipfile.ZipFile(file_path, "r") as zf:
                 slide_texts: List[str] = []
-                extracted_images = []
                 slide_names = sorted(
                     [
                         n
@@ -240,14 +173,9 @@ def parse_source_file(
                     ]
                     if texts:
                         slide_texts.append(" ".join(texts))
-                for mname in sorted(zf.namelist()):
-                    if mname.startswith("ppt/media/"):
-                        m_filename = Path(mname).name
-                        if Path(m_filename).suffix.lower() in IMAGE_EXTENSIONS:
-                            extracted_images.append((m_filename, zf.read(mname)))
-                if slide_texts or extracted_images:
+                if slide_texts:
                     body = "\n\n".join(slide_texts)
-                    return body, extracted_images, {}
+                    return body, [], {}
         except Exception as exc:
             if verbose:
                 print(f"[PPTX Fallback Exception] {exc}", file=sys.stderr)
@@ -295,14 +223,15 @@ def generate_frontmatter(
     updated_str = updated or today_str
 
     # 1. Domain list (1-2 standard codes, max 2 for 1+1 rule)
+    std_domains = get_dynamic_standard_domains()
+    fallback_domain = std_domains[1] if len(std_domains) > 1 else "macro"
     if domain:
         valid_domains = [d.strip() for d in domain if d.strip()]
     else:
-        valid_domains = ["macro"]
+        valid_domains = [fallback_domain]
     if not valid_domains:
-        valid_domains = ["macro"]
-    # Constitution Rule 2.4: multi-domain list must be sorted alphabetically (A-Z)
-    valid_domains = sorted(list(dict.fromkeys(valid_domains)), key=lambda s: s.lower())[:2]
+        valid_domains = [fallback_domain]
+    valid_domains = valid_domains[:2]
 
     domain_lines = ["domain:"] + [f"  - {d}" for d in valid_domains]
     domain_yaml = "\n".join(domain_lines)
@@ -605,16 +534,23 @@ def resolve_gdrive_url(
 
 
 def assemble_markdown_document(frontmatter: str, body: str, file_stem: str) -> str:
-    """Combine YAML frontmatter and markdown body, ensuring heading hierarchy."""
+    """Combine optional YAML frontmatter and markdown body, ensuring heading hierarchy."""
     clean_body = body.strip()
     lines = clean_body.splitlines()
     has_h1 = any(line.strip().startswith("# ") for line in lines[:5])
 
-    if not has_h1:
-        title = file_stem.replace("_", " ")
-        return f"{frontmatter}\n\n# {title}\n\n{clean_body}\n"
+    heading = f"# {file_stem.replace('_', ' ')}\n\n" if not has_h1 else ""
+    if frontmatter and frontmatter.strip():
+        fm = frontmatter.strip()
+        if heading:
+            return f"{fm}\n\n{heading}{clean_body}\n"
+        else:
+            return f"{fm}\n\n{clean_body}\n"
     else:
-        return f"{frontmatter}\n\n{clean_body}\n"
+        if heading:
+            return f"{heading}{clean_body}\n"
+        else:
+            return f"{clean_body}\n"
 
 
 def process_file(
@@ -649,9 +585,6 @@ def process_file(
     target_note_dir = vault_path / "000. Inbox"
     target_note_file = target_note_dir / f"{file_path.stem}.md"
 
-    # Image attachments directory
-    target_image_dir = vault_path / "900. config" / "910. Attached" / file_path.stem
-
     # Archive path calculation
     if args.subfolder:
         clean_subfolder = args.subfolder.strip().replace("\\", "/").strip("/")
@@ -675,12 +608,7 @@ def process_file(
     explicit_source_url = getattr(args, "source_url", None)
     gdrive_url = explicit_source_url or resolve_gdrive_url(file_path, wait_for_sync=False)
 
-    # 3. Rewrite or strip image links based on --extract-images
-    should_extract_images = getattr(args, "extract_images", False) and not getattr(args, "no_images", False)
-    if should_extract_images:
-        rewritten_body = rewrite_image_links(body_text, file_path.stem)
-    else:
-        rewritten_body = strip_image_links(body_text)
+    # 3. Use parsed markdown body directly (no image extraction or link rewriting)
 
     domain_list = [d.strip() for d in args.domain.split(",") if d.strip()]
     today_str = datetime.now().strftime("%Y-%m-%d")
@@ -692,29 +620,29 @@ def process_file(
             or resolve_gdrive_url(target_archive_file, wait_for_sync=False)
             or relative_source_url
         )
-        frontmatter = generate_frontmatter(
-            origin="source",
-            note_type="source",
-            domain=domain_list,
-            up=args.up,
-            status="active",
-            created=today_str,
-            updated=today_str,
-            source_type=args.source_type,
-            author=args.author,
-            org=args.org,
-            published=args.published,
-            ref_date=args.ref_date,
-            aliases=args.aliases,
-            summary=args.summary,
-            source_url=dry_source_url,
-            metadata=meta,
-            vault_root=vault_path,
-        )
         print(f"[DRY-RUN] Would generate note: {target_note_file}")
-        print(f"[DRY-RUN] Frontmatter preview:\n{frontmatter}")
-        if raw_images and should_extract_images:
-            print(f"[DRY-RUN] Would extract {len(raw_images)} images to: {target_image_dir}")
+        if getattr(args, "include_frontmatter", False):
+            frontmatter = generate_frontmatter(
+                origin="source",
+                note_type="source",
+                domain=domain_list,
+                up=args.up,
+                status="active",
+                created=today_str,
+                updated=today_str,
+                source_type=args.source_type,
+                author=args.author,
+                org=args.org,
+                published=args.published,
+                ref_date=args.ref_date,
+                aliases=args.aliases,
+                summary=args.summary,
+                source_url=dry_source_url,
+                metadata=meta,
+            )
+            print(f"[DRY-RUN] Frontmatter preview:\n{frontmatter}")
+        else:
+            print("[DRY-RUN] Mode: Pure markdown staging note (no frontmatter)")
         print(f"[DRY-RUN] Would archive source: {file_path} -> {target_archive_file}")
         return True
 
@@ -723,30 +651,7 @@ def process_file(
         if args.verbose:
             print(f"[Warning] Note already exists at {target_note_file}. Overwriting with updated parse.")
 
-    # 6. Extract and write images (only create image folder if images exist and extraction enabled)
-    if raw_images and should_extract_images:
-        target_image_dir.mkdir(parents=True, exist_ok=True)
-        for idx, img in enumerate(raw_images, start=1):
-            if isinstance(img, tuple) and len(img) == 2:
-                img_name, img_bytes = img
-            else:
-                img_name = getattr(img, "filename", None) or f"image_{idx:03d}.png"
-                if hasattr(img, "read"):
-                    img_bytes = img.read()
-                elif hasattr(img, "bytes"):
-                    img_bytes = img.bytes
-                elif isinstance(img, (bytes, bytearray)):
-                    img_bytes = bytes(img)
-                else:
-                    continue
-
-            clean_img_name = Path(img_name).name
-            target_img_path = target_image_dir / clean_img_name
-            target_img_path.write_bytes(img_bytes)
-            if args.verbose:
-                print(f"[Extracted Image] Saved {clean_img_name} ({len(img_bytes)} bytes) to {target_img_path}")
-
-    # 7. Move source binary to Archive_Sources/ (Inbox Zero) first so DriveFS can resolve archived path if needed
+    # 6. Move source binary to Archive_Sources/ (Inbox Zero) first so DriveFS can resolve archived path if needed
     target_archive_dir.mkdir(parents=True, exist_ok=True)
     if target_archive_file.exists():
         try:
@@ -763,27 +668,30 @@ def process_file(
     final_source_url = gdrive_url or relative_source_url
     print(f"Source URL: {final_source_url}")
 
-    # 9. Assemble frontmatter and write markdown note flat into 000. Inbox/
-    frontmatter = generate_frontmatter(
-        origin="source",
-        note_type="source",
-        domain=domain_list,
-        up=args.up,
-        status="active",
-        created=today_str,
-        updated=today_str,
-        source_type=args.source_type,
-        author=args.author,
-        org=args.org,
-        published=args.published,
-        ref_date=args.ref_date,
-        aliases=args.aliases,
-        summary=args.summary,
-        source_url=final_source_url,
-        metadata=meta,
-        vault_root=vault_path,
-    )
-    full_markdown = assemble_markdown_document(frontmatter, rewritten_body, file_path.stem)
+    # 9. Assemble markdown note (pure markdown by default; frontmatter only if --include-frontmatter)
+    if getattr(args, "include_frontmatter", False):
+        frontmatter = generate_frontmatter(
+            origin="source",
+            note_type="source",
+            domain=domain_list,
+            up=args.up,
+            status="active",
+            created=today_str,
+            updated=today_str,
+            source_type=args.source_type,
+            author=args.author,
+            org=args.org,
+            published=args.published,
+            ref_date=args.ref_date,
+            aliases=args.aliases,
+            summary=args.summary,
+            source_url=final_source_url,
+            metadata=meta,
+        )
+    else:
+        frontmatter = ""
+
+    full_markdown = assemble_markdown_document(frontmatter, body_text, file_path.stem)
 
     target_note_dir.mkdir(parents=True, exist_ok=True)
     target_note_file.write_text(full_markdown, encoding="utf-8")
@@ -888,16 +796,10 @@ def main() -> int:
         help="Explicit source_url override (defaults to auto-resolved Google Drive URL: https://drive.google.com/open?id=<ID>&usp=drive_fs)",
     )
     parser.add_argument(
-        "--extract-images",
+        "--include-frontmatter",
         action="store_true",
         default=False,
-        help="Extract embedded images to 900. config/910. Attached/<doc_stem>",
-    )
-    parser.add_argument(
-        "--no-images",
-        action="store_true",
-        default=False,
-        help="Disable image extraction (default)",
+        help="Include YAML frontmatter in parsed note (default: False, outputs pure markdown in 000. Inbox)",
     )
     parser.add_argument(
         "--table-format",

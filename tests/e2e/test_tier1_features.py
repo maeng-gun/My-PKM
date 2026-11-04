@@ -740,6 +740,7 @@ class TestTier1F9ParseSourcesCLI(unittest.TestCase):
                     "--vault", str(vault),
                     "--archive", str(archive),
                     "--domain", "macro",
+                    "--include-frontmatter",
                 ],
                 capture_output=True,
                 text=True,

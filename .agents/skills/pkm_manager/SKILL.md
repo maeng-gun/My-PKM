@@ -5,14 +5,15 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 # PKM Master Architect Skill (`pkm_manager`)
 
-본 스킬은 `My-PKM` 시스템의 구글 드라이브 마운트 옵시디언 볼트(`./My-Wiki`)와 지식 엔지니어링 거버넌스를 총괄 제어하는 마스터 스킬입니다.
+본 스킬은 `My-PKM` 시스템의 구글 드라이브 마운트 옵시디언 볼트(`./My-Wiki`)와 지식 엔지니어링 거버넌스를 총괄 제어하는 마스터 실행 엔진 스킬입니다.
 
 > [!IMPORTANT]
-> **엔진(Skill)과 헌법(`My-Wiki Rules.md`)의 완전 분리 원칙 (Pure Dynamic Pointer Architecture)**
-> - `My-Wiki/My-Wiki Rules.md`는 제미나이 앱(Spark)과 수기 작업을 통해 수시로 진화하는 **유일한 단일 마스터 헌법(Single Source of Truth, v3.5)**입니다.
-> - 본 스킬 파일(`SKILL.md`)과 Python CLI 도구(`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`)는 변하지 않는 **Antigravity(`agy`) 전용 실행 엔진** 역할을 수행합니다.
-> - **순수 동적 포인터 원칙**: 모든 볼트 규칙·스키마·4계층 컴파일 단계(`Step`/`M-Step`/`R-Step`/`A-Step`)·위키 아키타입 및 템플릿은 `./My-Wiki/My-Wiki Rules.md`를 유일한 동적 SSOT로 삼으며, 작업 전 반드시 `constitution_loader.py --vault ./My-Wiki` 및 `--section`으로 최신 헌법 조항을 런타임 조회하여 그대로 집행합니다.
-> - 따라서 `My-Wiki Rules.md`가 향후 버전으로 개정되더라도 본 스킬 문서를 다시 수정할 필요가 없습니다.
+> **엔진(Skill)과 헌법(`My-Wiki Rules.md`)의 완전 분리 원칙 (Pure Dynamic SSOT Pointer Architecture)**
+> - `My-Wiki/My-Wiki Rules.md`는 수시로 진화하고 버전업되는 **유일한 단일 마스터 헌법(Single Source of Truth)**입니다.
+> - 본 스킬 파일(`SKILL.md`)과 Python CLI 도구(`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`)는 볼트 헌법에 종속되지 않는 **불변의 Antigravity(`agy`) 전용 실행 엔진**입니다.
+> - **순수 동적 참조 원칙**: 폴더 권한, 프론트매터 스키마, 7대 코어 속성, 표준 도메인 목록, 컴파일 파이프라인(`Step`/`M-Step`/`A-Step`), 위키 아키타입 템플릿, 그리고 도메인별 복합 지식 구조화 규격(Case 1 ~ Case N)은 **스킬 내부에 일체 하드코딩하지 않습니다**.
+> - 에이전트는 작업 수행 전 반드시 `constitution_loader.py --vault ./My-Wiki` (및 `--section`)를 실행하여 실시간 헌법 조항을 동적으로 조회하고 그대로 집행합니다.
+> - 따라서 `My-Wiki Rules.md`가 향후 버전으로 개정되더라도 본 스킬 파일이나 코드를 수정할 필요 없이 영구히 안정적으로 동작합니다.
 
 ---
 
@@ -25,7 +26,7 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 | **볼트 접근 경로** | Google Drive API (`parentId` + `title` 쿼리) | 로컬 마운트 정션 (`./My-Wiki` ➔ `G:\내 드라이브\My-Wiki`) 및 `obsidian` MCP |
 | **파일 생성/수정** | Google Docs 자동 변환 방지를 위해 `application/octet-stream` 업로드 + 구버전을 `.trash`로 이동하는 **`Replace-and-Trash`** 사용 | Google Drive for Desktop(`DriveFS`)이 `.md` 확장자와 `fileId`를 자동 보존하므로 **`.trash` 백업 생성 없이 로컬 파일 I/O 및 `obsidian:vault_patch`로 직접 In-Place 수정** |
 | **노트 폴더 이동** | 새 폴더에 재생성 후 구 파일 `.trash` 이동 | `compile_helper.py move-note` 또는 `shutil.move`로 **직접 이동 (In-Place Move)** |
-| **외부 바이너리 파싱** | 불가 (또는 제한적) | **`pkm_parse` (`parse_sources.py`) 전담**: `Inbox_Raw/` 문서를 `kordoc` 파싱 + `910. Attached` 이미지 추출 + `DriveFS` 기반 `source_url` 생성 후 `000. Inbox/` 적재 |
+| **외부 바이너리 파싱** | 불가 (또는 제한적) | **`pkm_parse` (`parse_sources.py`) 전담**: `Inbox_Raw/` 문서를 `kordoc` 텍스트·표 파싱 후 순수 마크다운(프론트매터 없음)으로 `000. Inbox/` 적재 |
 | **헌법 본문 보호** | 사용자 지시 시 헌법 업데이트 | 사용자의 명시적 헌법 개정 지시가 없는 한 **`./My-Wiki/My-Wiki Rules.md` 본문은 임의 수정하지 않음** |
 
 ---
@@ -34,7 +35,7 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ### Workflow 1: 실시간 SSOT 동적 사전 검증 (Dynamic SSOT Pre-flight)
 
-옵시디언 볼트(`./My-Wiki`)의 메모를 생성, 수정, 분류, 링크 연결, 또는 위키 컴파일하기 전에 **반드시** 아래 사전 검증을 먼저 수행합니다:
+옵시디언 볼트(`./My-Wiki`)의 메모를 읽기, 생성, 수정, 분류, 링크 연결, 또는 위키 컴파일하기 전에 **반드시** 아래 사전 검증을 먼저 수행합니다:
 
 1. **헌법 SSOT 런타임 조회 및 동적 설정 로드 (`constitution_loader.py`)**:
    - 에이전트는 하드코딩된 규칙에 의존하지 않고, 작업 성격에 맞추어 `constitution_loader.py`를 실행하여 `./My-Wiki/My-Wiki Rules.md` 원문의 최신 조항을 실시간 조회합니다:
@@ -42,16 +43,16 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
      # 사용 가능한 헌법 섹션 키 목록 확인
      .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --list-sections
 
-     # 핵심 메타데이터 및 폴더-origin 매핑, 500. Index 목록 확인
+     # 핵심 메타데이터, 폴더-origin 매핑, 500. Index 목록 확인
      .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki
 
      # 프론트매터 스키마, 표준 도메인, Clean Null 규칙 확인
      .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section schema
 
-     # 링크 방향성(O/B/C), 1-Hop 연결, 이행적 축소 규칙 확인
+     # 링크 방향성(O/B/C), 1-Hop 직계 연결, 이행적 축소 규칙 확인
      .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section links
      ```
-2. **인간 주권 보호 (`100. Concepts`, `600. etc`) 및 바이너리 격리 준수 (불변 실행 원칙)**:
+2. **인간 주권 보호 (`100. Concepts`, `600. etc`) 및 바이너리 격리 준수**:
    - `100. Concepts` 및 `600. etc`(구 `500. etc`)는 인간 주권 영역이므로, 사용자의 명시적 인박스 컴파일·이동·링크 추가 지시 없이 임의로 노트를 생성하거나 본문을 왜곡·덮어쓰지 않습니다.
    - PDF, HWPX, HWP, XLSX, DOCX, PPTX 등 무거운 원본 바이너리는 볼트 내부에 절대 반입하지 않으며 `Inbox_Raw/` 및 `Archive_Sources/`에서만 관리합니다.
 
@@ -59,7 +60,7 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ### Workflow 2: 1차 인박스 컴파일 및 70% 흡수 게이트 파이프라인 (Inbox Compile Pipeline)
 
-`000. Inbox`에 존재하는 모든 메모는 **'아직 위키 컴파일 및 인덱싱을 거치지 않은 대기 상태'**를 의미합니다. 사용자의 *"인박스 컴파일해 줘"* 명령 시(또는 `pkm_parse` 파싱 직후 원스톱 컴파일 요청 시) `constitution_loader.py --vault ./My-Wiki --section compile`을 실행하여 확인한 최신 헌법 9.1절 컴파일 파이프라인 조항을 순서대로 실행합니다:
+`000. Inbox`에 존재하는 메모는 `pkm_parse`를 통해 수집된 순수 마크다운 메모를 포함하여 **'아직 위키 컴파일 및 인덱싱을 거치지 않은 미컴파일 대기 상태'**를 의미합니다. 사용자의 *"인박스 컴파일해 줘"* 명령 시(또는 `pkm_parse` 파싱 직후 원스톱 컴파일 요청 시) `constitution_loader.py --vault ./My-Wiki --section compile`을 실행하여 확인한 최신 헌법 컴파일 파이프라인 조항을 순서대로 실행합니다:
 
 ```bash
 # 최신 1차 컴파일 파이프라인 조항 런타임 조회
@@ -71,9 +72,9 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki inbox-status
 ```
 
-#### Step 1 — 프론트매터 설정 (`normalize-fm`)
+#### Step 1 — 프론트매터 생성 및 정규화 (`normalize-fm`)
 - `constitution_loader.py --vault ./My-Wiki --section schema`로 조회한 최신 스키마 규격에 따라 대상 메모에 맞는 프론트매터를 부여합니다.
-- 구 레거시 속성이 남아 있는 메모는 `compile_helper.py normalize-fm`을 통해 깔끔히 제거하고 헌법 필수 코어/확장 속성으로 정규화합니다.
+- `000. Inbox/`에 프론트매터 없이 적재된 순수 마크다운 파일(또는 구 레거시 속성이 있는 메모)에 대해 `compile_helper.py normalize-fm`을 실행하여 헌법 필수 코어 속성(`origin`, `type`, `domain`, `up`, `status`, `created`, `updated`) 및 확장 속성으로 정규화합니다.
 - 하나의 메모가 복수의 위키 주제를 다룰 경우 `up`에 복수의 위키링크를 지정하며(다대다 `N:M` 허용), 연결할 대상이 없을 때는 절대로 `"[[]]"`(빈 대괄호 텍스트)로 남겨두지 않고, 반드시 `[]`(YAML 빈 리스트)로 표기합니다.
 - `domain` 항목이 2개 이상이면 헌법 규칙 2.4에 따라 반드시 알파벳 오름차순(A-Z)으로 정렬합니다 (`compile_helper.py`·`parse_sources.py`·`ingest_sources.py`는 입력 순서와 무관하게 자동 정렬하며, `vault_linter.py --check-astep`이 위반을 감지하고 `--fix`가 자동 교정합니다).
 
@@ -105,16 +106,16 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 #### Step 3 — 원천(`origin`)별 폴더 이동 및 `500. Index` 원천 인덱스 등록
 1. **폴더 이동 (`move-note`)**:
-   - 컴파일이 완료된 메모를 `origin` 및 시리즈 성격에 따라 영구 폴더로 이동합니다:
+   - 컴파일이 완료된 메모를 `constitution_loader.py`의 `folder_origin_map`에 따라 영구 폴더로 이동합니다:
      - `origin: human` ➔ `100. Concepts/`
-     - `origin: ai` ➔ `200. AI_logs/` (조간신문 큐레이팅은 `200. AI_logs/210. 뉴스 큐레이팅/`, 산업분석 단계 리포트는 `200. AI_logs/220. 산업분석/`)
-     - `origin: source` ➔ `300. Sources/`
+     - `origin: ai` ➔ `200. AI_logs/` (시리즈에 따라 `210. 뉴스 큐레이팅/`, `220. 산업분석/` 등)
+     - `origin: source` ➔ `300. Sources/` (밸리AI 리포트는 `310. 밸리 AI 리포트/` 등)
    ```bash
    .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki move-note \
      --file "000. Inbox/대상메모.md" --origin "human"
    ```
 2. **분할 인덱스 등재 (`upsert-index`)**:
-   - `500. Index` 내 해당 원천 인덱스(`_인덱스_100_Concepts.md`, `_인덱스_200_AI_logs.md`, `_인덱스_300_Sources.md`, `_인덱스_210_뉴스큐레이팅.md`, `_인덱스_220_산업분석.md`)의 마크다운 표에 요약 행을 추가합니다:
+   - `500. Index` 내 해당 원천 인덱스(`_인덱스_100_Concepts.md`, `_인덱스_200_AI_logs.md`, `_인덱스_300_Sources.md` 등)의 마크다운 표에 요약 행을 추가합니다:
    ```bash
    .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki upsert-index \
      --index "_인덱스_100_Concepts.md" \
@@ -154,7 +155,7 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
    ```bash
    .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/compile_helper.py --vault ./My-Wiki detect-mstep
    ```
-   - 컴파일 완료 후 `detect-mstep` 진단 결과를 바탕으로 헌법 기준에 따라 상향 컴파일 후보군을 사용자에게 제안하거나(바텀업 창발), 사전 합의된 탑다운 골격 및 사용자 지시 시 실행합니다.
+   - 컴파일 완료 후 `detect-mstep` 진단 결과를 바탕으로 헌법 기준에 따라 상향 컴파일 후보군을 사용자에게 제안하거나, 사전 정의된 탑다운 분류 골격 및 사용자 지시 시 실행합니다.
 2. **동적 메타 컴파일 집행**:
    - **재귀적 입력 제한**: `My-Wiki Rules.md` 헌법에 따라 토큰 초과를 방지하기 위해 하위 원천 메모를 직접 읽지 않고 묶음 대상 위키 본문과 인덱스만 열람합니다.
    - **1-Hop 직계 재연결 및 이행적 축소**: 신규 상위/중간 위키 신설 시 `compile_helper.py normalize-fm`의 `--remove-up` 및 `--replace-up` 옵션을 활용하여 1-Hop 직계 연결을 원자적으로 재구성합니다.
@@ -164,48 +165,24 @@ description: "My-PKM Master Architect Skill (Pure Dynamic SSOT): My-Wiki Rules.m
 
 ### Workflow 4: 3차 전 계층(`Lv1~Lv4`) 수평 통폐합·추상화·분할 상시 리팩토링 (R-Step 1~5)
 
-조간신문 사건 위키와 외부 리포트 파생 각론 위키들의 난립을 상시 억제하고 분류 체계를 유지하기 위해, `constitution_loader.py --vault ./My-Wiki --section rstep`을 실행하여 확인한 최신 헌법 9.3절 5단계 무결성 리팩토링 프로토콜(`R-Step 1~5`)을 상시 가동합니다:
+독서모임, 뉴스 큐레이팅, 산업·기업 분류 체계, 이론·매크로 분류표, 밸리AI 리포트 시리즈, 700. utilize 큐레이션, 가족 투자 포트폴리오 및 ETF 원천 도감 등 도메인별 세부 구조화는 규칙을 스킬에 하드코딩하지 않고, 항상 `constitution_loader.py`를 실행하여 헌법 원문의 최신 규격을 런타임 조회하여 수행합니다:
 
 ```bash
-# 최신 3차 리팩토링 프로토콜(R-Step) 조항 런타임 조회
-.\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section rstep
-```
-
-1. **2-Track 트리거 거버넌스**:
-   - **Track 1 (컴파일 시점 자동 감지)**: 컴파일 대상 상위 기둥 아래에 **유사 `Lv4` 중복(2개+)**이 감지되면 **AI가 즉시 자율적으로 `Lv4` 수평 통폐합(`R-Step 1~5`)을 수행한 뒤 사후 보고**하며, **`Lv1~Lv3` 구조 개편(Lv3 Roll-up 신설, Lv1~Lv3 수평 분할 및 미사용 기둥 폐쇄)** 임계치 도달 시에는 **희명님께 사전 제안·승인 후 실행**합니다.
-   - **Track 2 (사용자 수시 명령)**: 사용자의 *"위키 통폐합/정리해 줘"* 지시 시 `_인덱스_400_Wiki.md` 트리를 스캔하여 통폐합·추상화·분할을 일괄 집행합니다.
-2. **5단계 실행 절차**:
-   - **R-Step 1**: 타깃 선정 및 본문 무손실 통합/분할 (`aliases`에 구 위키 명칭 필수 등록)
-   - **R-Step 2**: `500. Index` 기반 하위 원천 메모 및 인접 위키의 `up`·인라인 링크 일괄 역추적 치환 (Re-wiring)
-   - **R-Step 3**: 통폐합·분할로 소멸한 구 위키 파일을 구글 드라이브 루트 직속 `.trash`로 격리 이동 (`_merged_YYYYMMDD.md`)
-   - **R-Step 4**: `500. Index` 마스터 트리(`_인덱스_400_Wiki.md`) 및 분할 원천 인덱스 레지스트리 동기화
-   - **R-Step 5**: 사후 감사(`A-Step 1~5`) 실행 ➔ Dead Link 및 유령 노드 0건 검증
-
----
-
-### Workflow 5: 도메인별 복합 지식 구조화 규격 (Domain-Specific Structural Patterns)
-
-독서모임, 뉴스 큐레이팅, 산업·기업 분류 체계, 이론·매크로 분류 체계 등 복합 지식 구조화는 세부 조항을 하드코딩하지 않고, 항상 `constitution_loader.py --vault ./My-Wiki --section cases`를 실행하여 헌법 원문의 최신 규격을 런타임 조회하여 수행합니다:
-
-```bash
-# 도메인별 복합 지식 구조화 실전 규격 런타임 조회
+# 도메인별 복합 지식 구조화 실전 규격(Case 1 ~ Case N) 런타임 조회
 .\.venv\Scripts\python.exe .agents/skills/pkm_manager/scripts/constitution_loader.py --vault ./My-Wiki --section cases
 ```
 
-- **Case 1 (독서 및 독서모임 5차원 직교 구조화)**: 헌법 5.1절에 정의된 모임 마스터 허브(`[[밸리AI 독서모임]]`), 2계층 도서 위키(`독서_요약_...` + `[[도서_책제목(저자)]]`), 산출물 4종 물리적 폴더 분리 및 수평 시계열 사다리(`source` ➔ `prev`), 파생 각론 위키와의 삼각형 중복 차단(`related`로 분리), 엔티티 분리 규격 준수.
-- **Case 2 (조간신문 큐레이팅 리포트 사건 트래킹)**: 헌법 5.2절에 정의된 일별 리포트 전용 인덱스 단일 귀속, 섹션별 1-Hop 사건 태깅, 사건 위키(`400. Wiki/[[표준 사건/이슈명]].md`)의 **보도일자 역순(최신이 맨 위) 타임라인** 컴파일 규격 준수.
-- **Case 3 (산업·기업 234개 위키 체계 및 N:1:N 모래시계 컴파일)**: 헌법 5.3절에 정의된 8대 밸류체인(Lv1) ➔ 33개 단계(Lv2) ➔ 193개 세부산업(Lv3) ➔ 개별 기업(Lv4: `기업_기업명(티커명)`) 계층 규격 및 `N to 1 to N` 수렴·발산 컴파일, 이행적 축소 규격 준수.
-- **Case 4 (이론·매크로 11대 Lv1 · 32개 Lv2 탑다운 골격 및 동적 컴파일)**: 헌법 5.4절에 정의된 5대 이론 클러스터(`T1~T5`) 및 15개 중분류(`T1-S1 ~ T5-S3`), 6대 매크로 클러스터(`M1~M6`) 및 17개 중분류(`M1-S1 ~ M6-S3`) 표준 골격, **미사용 상위 기둥의 지연 실체화(Lazy Instantiation: 하위 위키 1개 이상 매핑 시 마크다운 파일 생성)**, 11대 표준 접두사(`T#_`, `T#-S#_`, `M#_`, `M#-S#_`, `C#_`, `C#-S#_`, `산업_`, `기업_`, `도서_`, `인물_`, `_인덱스_`) 준수.
+에이전트는 조회된 최신 규격에 따라 각 도메인의 계층 네이밍, 수렴·발산 컴파일 메커니즘, 직계 1-Hop `up` 연결 및 롤업 규칙을 그대로 집행합니다.
 
 ---
 
 ### Workflow 6: 외부 원천자료 파싱(`pkm_parse`) 연계 및 볼트 헌법 사후 감사 (`vault_linter.py`)
 
 #### 1. 외부 원천자료 파싱(`pkm_parse`)과의 투트랙(Two-Track) 연계
-- `Inbox_Raw/`에 반입된 PDF, HWPX, HWP, XLSX, DOCX, PPTX 문서는 전용 파싱 스킬인 **`pkm_parse` (`.agents/skills/pkm_parse/scripts/parse_sources.py`)**를 호출하여 순수 텍스트·표 추출 + `DriveFS` 기반 `source_url` 부여 후 `000. Inbox/`에 플랫 적재합니다.
+- `Inbox_Raw/`에 반입된 PDF, HWPX, HWP, XLSX, DOCX, PPTX 문서는 전용 파싱 스킬인 **`pkm_parse` (`.agents/skills/pkm_parse/scripts/parse_sources.py`)**를 호출하여 `000. Inbox/<stem>.md`에 순수 마크다운으로 적재합니다.
 - **투트랙 운영**:
-  - **Track A (파싱 단독 실행)**: 사용자가 *"파싱만 해 줘"* 또는 *"인박스에 넣어 줘"*라고 지시하면 `pkm_parse`의 Stage 1~2(`000. Inbox` 적재 및 시맨틱 프론트매터 보강)까지만 수행하고 대기합니다.
-  - **Track B (파싱 + 위키 컴파일 원스톱 실행)**: 사용자가 *"이 자료 파싱해서 위키에 컴파일/반영해 줘"*라고 지시하면 `pkm_parse` 실행 직후 즉시 본 스킬(`pkm_manager`)의 **Workflow 2**를 연속 실행하여 `400. Wiki` 컴파일(70% 중첩 흡수 게이트 적용), `300. Sources` 이동, `_인덱스_300_Sources.md` 등재 및 기존 노트 역추적 재컴파일까지 원스톱으로 완료합니다.
+  - **Track A (파싱 단독 실행)**: 사용자가 *"파싱만 해 줘"* 또는 *"인박스에 넣어 줘"*라고 지시하면 `pkm_parse`가 `000. Inbox/`에 순수 마크다운 적재 및 원본 아카이빙(Inbox Zero)까지만 수행하고 대기합니다.
+  - **Track B (파싱 + 위키 컴파일 원스톱 실행)**: 사용자가 *"이 자료 파싱해서 위키에 컴파일/반영해 줘"*라고 지시하면 `pkm_parse` 실행 직후 즉시 본 스킬(`pkm_manager`)의 **Workflow 2**를 연속 실행하여 `000. Inbox/` 노트를 최신 헌법 스키마로 정규화(`normalize-fm`), `400. Wiki` 컴파일, 영구 폴더 이동, `500. Index` 등재 및 기존 노트 역추적 재컴파일까지 원스톱으로 완료합니다.
 - *(참고: `.agents/skills/pkm_manager/scripts/ingest_sources.py`는 기존 레거시 테스트 스위트 하위 호환용으로만 유지됩니다.)*
 
 #### 2. 볼트 헌법 전 조항 사후 감사 (`A-Step 1~5` & `vault_linter.py`)

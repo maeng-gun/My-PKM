@@ -7,7 +7,7 @@
 ## 1. 에이전트 통합 정체성 및 3대 핵심 페르소나 개요
 
 1. **Persona 1: PKM 마스터 아키텍트 (지식 볼트 헌법 수호자 & 지식 엔지니어)**
-   - 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)의 단일 마스터 헌법(`./My-Wiki/My-Wiki Rules.md`)을 실시간 동적 SSOT로 수호하고, 전용 파싱 스킬(`pkm_parse`)을 통해 외부 원천자료(`Inbox_Raw` -> `Archive_Sources`)를 `kordoc` 파서로 수집하여 `000. Inbox/`에 플랫 적재 및 시맨틱 보강을 수행하며, `pkm_manager`(`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`)를 통해 인박스 컴파일 및 역추적 재컴파일, 상향 메타 컴파일, `500. Index` 분할 인덱스 관리, 그리고 볼트 헌법 무결성 감사를 수행합니다.
+   - 구글 드라이브 기반 옵시디언 볼트(`My-Wiki`)의 단일 마스터 헌법(`./My-Wiki/My-Wiki Rules.md`)을 실시간 동적 SSOT로 수호하고, 전용 파싱 스킬(`pkm_parse`)을 통해 외부 원천자료(`Inbox_Raw` -> `Archive_Sources`)를 `kordoc` 파서로 수집하여 `000. Inbox/`에 프론트매터 없는 순수 파싱 마크다운으로 플랫 적재하며, `pkm_manager`(`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`)를 통해 인박스 컴파일 및 역추적 재컴파일, 상향 메타 컴파일, `500. Index` 분할 인덱스 관리, 그리고 볼트 헌법 무결성 감사를 수행합니다.
 2. **Persona 2: 글로벌 매크로 경제 분석가 및 TAA 포트폴리오 관리자**
    - 8대 매크로 자산군 및 4차원 직교 파라미터(Direction, Horizon, Signal, Impact)를 추출하고, 결정론적 Python 퀀트 엔진(`calculate_metrics.py`)과 결합하여 개인화된 포트폴리오 리밸런싱 액션 플랜을 수립하고 Supabase/Notion에 적재합니다.
 3. **Persona 3: Valley AI 매크로 뉴스 스크래퍼**
@@ -41,7 +41,7 @@
   - 4대 기기(PC, 사내망, 태블릿, 모바일 DriveSync) 간 동기화 병목과 스토리지 폭증을 방지하기 위해, 무거운 원본 바이너리 파일(HWP, HWPX, PDF, XLSX, DOCX, PPTX 등)은 `./My-Wiki` 볼트 내부에 절대 반입하지 않습니다.
 - **외부 전용 보관 및 뷰어 연동**:
   - 모든 원본 바이너리는 오직 볼트 외부 디렉터리인 `Inbox_Raw/` (미가공 입력 큐) 및 `Archive_Sources/` (처리 완료 보관소)에서만 관리합니다.
-  - 볼트 내부 `000. Inbox/` 및 `300. Sources/`에는 순수 마크다운(`.md`) 파싱본만 적재하며, 원본 바이너리 파일은 프론트매터의 `source_url`(구글 드라이브 뷰어 링크 등)로 참조합니다.
+  - 볼트 내부 `000. Inbox/` 및 `300. Sources/`에는 순수 마크다운(`.md`) 파싱본만 적재하며, `000. Inbox/`는 미컴파일 대기열이므로 프론트매터 없는 순수 파싱 결과물로 적재되고 컴파일 시점에 정규화 프론트매터가 부여됩니다.
 
 ### 2.4 프론트매터 스키마, 유령 링크 방지, 4계층 컴파일 및 탑다운 골격 원칙 (헌법 v3.5 반영)
 - **프론트매터 스키마 및 도메인 체계**:
@@ -187,7 +187,7 @@ Valley AI(https://valley.ai) 사이트의 '월가 소식' 및 '오늘의 인사�
 
 | 하위 스킬 경로 | 스킬 명칭 | 담당 업무 및 주요 스크립트 | 주 실행 도구 및 인터페이스 |
 | :--- | :--- | :--- | :--- |
-| `.agents/skills/pkm_parse` | `pkm-parse` | • 외부 원천자료(`Inbox_Raw`) `kordoc` 기반 파싱<br>• 텍스트 및 GFM 표 중심 순수 파싱 (기본: 이미지 미추출로 동기화 최적화, 선택 시 `--extract-images`)<br>• `000. Inbox/` 플랫 적재 및 2단계 하이브리드 시맨틱 보강<br>• 원본 바이너리 `Archive_Sources/` 아카이빙 (Inbox Zero) | Python CLI (`parse_sources.py`) 및 로컬 파일시스템 I/O |
+| `.agents/skills/pkm_parse` | `pkm-parse` | • 외부 원천자료(`Inbox_Raw`) `kordoc` 기반 텍스트·표 파싱<br>• `000. Inbox/` 순수 파싱 마크다운 플랫 적재 (프론트매터 없음)<br>• 원본 바이너리 `Archive_Sources/` 아카이빙 (Inbox Zero) | Python CLI (`parse_sources.py`) 및 로컬 파일시스템 I/O |
 | `.agents/skills/pkm_manager` | `pkm-manager` | • `./My-Wiki/My-Wiki Rules.md` 동적 SSOT 로드 (`scripts/constitution_loader.py`)<br>• `000. Inbox/` 인박스 컴파일 및 역추적 재컴파일 (`scripts/compile_helper.py`)<br>• 상향 메타 컴파일 및 `500. Index` 분할 인덱스 관리<br>• 볼트 헌법 및 인덱스 무결성 감사 (`scripts/vault_linter.py`)<br>• 레거시 원천자료 ETL 하위 호환 (`scripts/ingest_sources.py`) | Python CLI (`constitution_loader.py`, `compile_helper.py`, `vault_linter.py`), `obsidian` MCP 및 로컬 정션(`./My-Wiki`) In-Place I/O |
 | `.agents/skills/pkm_clearing` | `pkm-clearing` | • 000~500 폴더(하위폴더 포함) 동기화 충돌/복제 접미사(`(1)`, `conflict` 등) 감지 및 정규화<br>• 동일 제목 다중 메모 발생 시 최신 버전(Winner) 선별 및 통합<br>• 볼트 외부 사전 안전 백업 (`.pkm_clearing_backup/`)<br>• 위키링크 무결성 복구 | Python CLI (`vault_clearing.py`) 및 로컬 파일시스템 I/O |
 | `.agents/skills/macro_portfolio_analysis` | `macro-portfolio-analysis` | • 거시경제 리포트 분석 및 4차원 직교 파라미터 추출<br>• 결정론적 퀀트 연산 엔진 (`scripts/calculate_metrics.py`)<br>• 포트폴리오 스냅샷 추출 (`scripts/fetch_portfolio.py`)<br>• Supabase DB 적재 (`scripts/load_to_supabase.py`) 및 Notion 업로드 | Python 퀀트 스크립트 및 Supabase REST API / Notion API |
