@@ -1,4 +1,11 @@
 import os
+import sys
+
+# Anaconda site-packages 충돌 방지
+if 'PYTHONPATH' in os.environ:
+    os.environ.pop('PYTHONPATH')
+sys.path = [p for p in sys.path if 'anaconda3' not in p.lower()]
+
 import re
 import argparse
 import datetime
