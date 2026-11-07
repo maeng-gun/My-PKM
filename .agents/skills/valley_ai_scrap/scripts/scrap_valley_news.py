@@ -32,10 +32,45 @@ load_env()
 EMAIL = os.getenv("VALLEY_EMAIL")
 PASSWORD = os.getenv("VALLEY_PASSWORD")
 
+def find_next_start_date(source_dir, prefix):
+    """
+    지정된 폴더(예: My-Wiki/300. Sources/310. 밸리 AI 리포트) 내에서
+    '{prefix}_YYYY-MM-DD.md' 형식의 파일 중 가장 최근 기준일을 찾아 그 다음날(date 객체)을 반환합니다.
+    파일이 없으면 오늘 날짜를 반환합니다.
+    """
+    latest_date = None
+    pattern = re.compile(rf"^{re.escape(prefix)}_(\d{{4}}-\d{{2}}-\d{{2}})\.md$")
+    if os.path.exists(source_dir):
+        for fname in os.listdir(source_dir):
+            m = pattern.match(fname)
+            if m:
+                try:
+                    d = datetime.datetime.strptime(m.group(1), "%Y-%m-%d").date()
+                    if latest_date is None or d > latest_date:
+                        latest_date = d
+                except ValueError:
+                    pass
+    if latest_date:
+        return latest_date + datetime.timedelta(days=1), latest_date
+    return datetime.date.today(), None
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Valley AI News Scraper (Headless)")
-    parser.add_argument("--start", required=True, help="Start date in YYYY-MM-DD format")
-    parser.add_argument("--end", required=True, help="End date in YYYY-MM-DD format")
+    parser.add_argument(
+        "--start",
+        default=None,
+        help="Start date in YYYY-MM-DD format (if omitted, auto-detected from --source-dir)"
+    )
+    parser.add_argument(
+        "--end",
+        default=None,
+        help="End date in YYYY-MM-DD format (default: today)"
+    )
+    parser.add_argument(
+        "--source-dir",
+        default=os.path.join("My-Wiki", "300. Sources", "310. 밸리 AI 리포트"),
+        help="Directory to check for latest scraped reports when --start is omitted"
+    )
     parser.add_argument(
         "--output-dir", "-o",
         default=os.path.join("My-Wiki", "000. Inbox"),
@@ -361,27 +396,58 @@ def scrape_board(context, category_url, start_date, end_date, title_prefix, outp
 
 def main():
     args = parse_args()
-    start_date = datetime.datetime.strptime(args.start, "%Y-%m-%d").date()
-    end_date = datetime.datetime.strptime(args.end, "%Y-%m-%d").date()
+    end_date = (
+        datetime.datetime.strptime(args.end, "%Y-%m-%d").date()
+        if args.end
+        else datetime.date.today()
+    )
     output_dir = args.output_dir
-    
+    source_dir = args.source_dir
+
+    if args.start:
+        wsj_start_date = datetime.datetime.strptime(args.start, "%Y-%m-%d").date()
+        insight_start_date = wsj_start_date
+        wsj_latest, insight_latest = None, None
+    else:
+        wsj_start_date, wsj_latest = find_next_start_date(source_dir, "밸리AI 월가소식 리포트")
+        insight_start_date, insight_latest = find_next_start_date(source_dir, "밸리AI 오늘의 인사이트")
+
     print("=" * 60)
     print(f"Valley AI 매크로 뉴스 백그라운드 수집 시작")
-    print(f"수집 대상 기간: {start_date} ~ {end_date}")
+    if args.start:
+        print(f"수집 대상 기간: {wsj_start_date} ~ {end_date}")
+    else:
+        print(f"기준 폴더: {source_dir}")
+        print(f"- 월가 소식 최근 기준일: {wsj_latest or '없음'} -> 수집 대상 기간: {wsj_start_date} ~ {end_date}")
+        print(f"- 오늘의 인사이트 최근 기준일: {insight_latest or '없음'} -> 수집 대상 기간: {insight_start_date} ~ {end_date}")
     print(f"저장 위치: {output_dir}")
     print("=" * 60)
-    
+
+    wsj_count = 0
+    insight_count = 0
+
     with sync_playwright() as p:
         browser, context = get_authenticated_context(p)
-        
-        wsj_count = scrape_board(context, WSJ_URL, start_date, end_date, "밸리AI 월가소식 리포트", output_dir)
-        insight_count = scrape_board(context, INSIGHT_URL, start_date, end_date, "밸리AI 오늘의 인사이트", output_dir)
-        
+
+        if wsj_start_date <= end_date:
+            wsj_count = scrape_board(context, WSJ_URL, wsj_start_date, end_date, "밸리AI 월가소식 리포트", output_dir)
+        else:
+            print(f"\n[밸리AI 월가소식 리포트] 시작일({wsj_start_date})이 종료일({end_date}) 이후이므로 수집을 건너뜁니다.")
+
+        if insight_start_date <= end_date:
+            insight_count = scrape_board(context, INSIGHT_URL, insight_start_date, end_date, "밸리AI 오늘의 인사이트", output_dir)
+        else:
+            print(f"\n[밸리AI 오늘의 인사이트] 시작일({insight_start_date})이 종료일({end_date}) 이후이므로 수집을 건너뜁니다.")
+
         browser.close()
-        
+
     print("\n" + "=" * 60)
     print(f"[수집 완료 보고]")
-    print(f"- 대상 기간: {start_date} ~ {end_date}")
+    if args.start:
+        print(f"- 대상 기간: {wsj_start_date} ~ {end_date}")
+    else:
+        print(f"- 월가 소식 대상 기간: {wsj_start_date} ~ {end_date}")
+        print(f"- 오늘의 인사이트 대상 기간: {insight_start_date} ~ {end_date}")
     print(f"- 저장 위치: {output_dir}")
     print(f"- 월가 소식: {wsj_count}건")
     print(f"- 오늘의 인사이트: {insight_count}건")

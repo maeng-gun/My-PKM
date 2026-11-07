@@ -11,14 +11,21 @@ description: >-
 
 ## 작동 규칙 (규범적 지시사항)
 
-1. **사용자 요청 분석**:
-   - 사용자가 "이번 주 소식 긁어와", "어제 뉴스 스크랩해줘"와 같이 모호한 날짜를 지시하면, 현재 시스템 날짜를 기준으로 정확한 `YYYY-MM-DD` 형태의 `start_date`와 `end_date`를 도출하세요.
-   - 예: 사용자가 "오늘"을 지시하면 start_date와 end_date는 모두 오늘 날짜입니다.
+1. **사용자 요청 분석 및 시작일 자동 결정**:
+   - 사용자가 "이번 주 소식 긁어와", "어제 뉴스 스크랩해줘"와 같이 특정 날짜/기간을 지시하면, 현재 시스템 날짜를 기준으로 정확한 `YYYY-MM-DD` 형태의 `start_date`와 `end_date`를 도출하세요.
+   - 예: 사용자가 "오늘"을 지시하면 `start_date`와 `end_date`는 모두 오늘 날짜입니다.
+   - **시작일자를 따로 정하지 않는 경우 (자동 증분 수집)**:
+     * `My-Wiki/300. Sources/310. 밸리 AI 리포트` 폴더에 있는 `밸리AI 오늘의 인사이트_YYYY-MM-DD.md`와 `밸리AI 월가소식 리포트_YYYY-MM-DD.md` 파일 중에서 각각 기준일이 가장 최근인 날짜를 찾고, **그 다음날(`최근 기준일 + 1일`)**을 각 게시판의 스크랩 대상 시작일자로 설정합니다.
+     * 스크립트 실행 시 `--start` 인자를 생략하면 스크립트가 자동으로 위 폴더를 스캔하여 각 게시판별 다음날부터 종료일(`--end`, 생략 시 오늘 날짜)까지 스크랩을 수행합니다.
 
 2. **파이썬 스크립트 실행 및 저장 규격**:
    - 프로젝트 루트의 가상환경(`.venv`) 인터프리터를 우선적으로 사용하여 스크립트를 구동하세요.
-     * Windows: `.\.venv\Scripts\python.exe .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py --start <YYYY-MM-DD> --end <YYYY-MM-DD>`
-     * Linux/macOS: `./.venv/bin/python .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py --start <YYYY-MM-DD> --end <YYYY-MM-DD>`
+     * 시작일 미지정 (자동 증분 수집, 오늘자까지):
+       - Windows: `.\.venv\Scripts\python.exe .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py`
+       - Linux/macOS: `./.venv/bin/python .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py`
+     * 특정 시작일/종료일 지정 시:
+       - Windows: `.\.venv\Scripts\python.exe .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py --start <YYYY-MM-DD> --end <YYYY-MM-DD>`
+       - Linux/macOS: `./.venv/bin/python .agents/skills/valley_ai_scrap/scripts/scrap_valley_news.py --start <YYYY-MM-DD> --end <YYYY-MM-DD>`
      * 만약 `.venv`가 없다면 현재 활성화된 가상환경의 `python` 명령어로 실행합니다.
    - **저장 위치**: 기본적으로 볼트 1차 수집 대기열인 `My-Wiki/000. Inbox/`에 플랫 저장됩니다. (필요 시 `--output-dir` 옵션으로 변경 가능)
    - **파일명 및 헤더 규칙**:
